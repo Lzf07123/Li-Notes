@@ -29,12 +29,12 @@
 ## 3. 推荐架构
 
 ```text
-             content/cheatsheets/*.md（唯一事实源）
+       content/posts/*.md + mini_json（唯一事实源）
                          │
              ┌───────────┴───────────┐
              │                       │
-      Hugo 构建网页            导出脚本
-  /cheatsheets/ 与文章页     knowledge bundle
+      Hugo 构建完整文章         knowledge 导出
+      /posts/<slug>/           knowledge bundle
              │                       │
              │         ┌─────────────┴─────────────┐
              │         │                           │
@@ -45,48 +45,52 @@
 
 ### 3.1 内容源
 
-新增 `content/cheatsheets/<slug>.md`，使用 Markdown + YAML frontmatter：
+不新增文章副本。每篇笔记仍是 `content/posts/<slug>.md`；需要进入小程序时，在 frontmatter 增加一个 `mini_json` 块标量：
 
 ```yaml
+```yaml
 ---
-title: APT 包管理
-slug: apt
-kind: command
-category: linux
-command: apt
-summary: Debian / Ubuntu 新一代包管理入口
-keywords: [安装, 卸载, 更新, debian, ubuntu]
-syntax: |
-  apt [选项] 操作 [包名]
-examples:
-  - label: 刷新软件源索引
-    code: sudo apt update
-  - label: 安装并验证软件包
-    code: |
-      sudo apt install nginx
-      nginx -v
-notes:
-  - 安装或升级前先执行 apt update。
-related: [apt-get, dpkg, flatpak]
-source_url: /posts/apt/
+title: 包管理-apt
+date: 2026-05-24
 status: published
-updated: 2026-10-23
+mini_json: |-
+  {
+    "enabled": true,
+    "items": [
+      {
+        "id": "apt",
+        "category": "linux",
+        "title": "APT 包管理",
+        "command": "apt",
+        "summary": "Debian / Ubuntu 新一代包管理入口",
+        "keywords": ["安装", "卸载", "更新"],
+        "tags": ["包管理", "Linux"],
+        "syntax": "apt [选项] 操作 [包名]",
+        "examples": [
+          {"label": "刷新软件源索引", "code": "sudo apt update"}
+        ],
+        "notes": ["安装或升级前先执行 apt update。"],
+        "related": ["apt-get", "dpkg", "flatpak"],
+        "order": 10
+      }
+    ]
+  }
 ---
 
 apt 是 Debian / Ubuntu 系列常用的包管理入口。
 ```
+```
 
-- 正文供网页阅读。
-- frontmatter 供小程序导出，禁止把 WXML/JS/HTML 放入数据。
-- `related` 必须指向存在的速查 slug。
-- `source_url` 必须为站内文章或速查页，供小程序复制，不做 `web-view`。
+- 正文只供网页阅读，不会进入小程序。
+- `mini_json` 供构建期导出；后台编辑器提供 JSON 校验。
+- 不使用 `web-view`，小程序只保留结构化条目和可复制的文章 URL。
+- `related` 必须指向存在的速查 id。
 
 ### 3.2 网页端
 
-- Hugo 新增 `cheatsheets` section，复用 Li&Notes 的布局与令牌。
-- 文章与速查页共享搜索索引，但搜索前端仍只读构建期 JSON。
-- 文章可通过短代码链接到速查页，例如 `{{< cheatsheet "apt" >}}`。
-- 速查页不新增公开输入、评论或用户数据。
+- 文章仍只出现在 `/posts/`，不产生第二套文章页面。
+- `mini_json` 对网页正文无影响，Hugo 只把它当作 frontmatter 数据。
+- 小程序不镜像正文；需要原文时复制文章 URL 到浏览器。
 
 ### 3.3 小程序端
 
@@ -210,7 +214,7 @@ packages/knowledge-schema/
 
 ### P2：建立速查内容源和导出脚本
 
-- 新增 `content/cheatsheets/`。
+- 为现有文章补充 `mini_json`，后台编辑器提供该字段。
 - 定义 schema 与校验器。
 - 实现 `scripts/export_knowledge.py`。
 - 生成 `output/knowledge/manifest.json` 与版本数据。
@@ -266,6 +270,6 @@ packages/knowledge-schema/
 
 - Li&Notes 继续做完整文章网页和编辑后台。
 - 小程序只做结构化速查和阅读辅助。
-- 用 Markdown/YAML 单一事实源生成两端产物。
+- 用文章 Markdown + `mini_json` 单一事实源生成两端产物。
 - 小程序保留离线基线，远程 manifest 只更新内容。
 - 本阶段先完成 Li&Notes 文章域分离，再实施导出脚本与小程序加载层。
