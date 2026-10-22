@@ -6,7 +6,7 @@ Li&Notes 是个人学习笔记站，负责完整 Markdown 笔记的写作、归�
 
 ## 边界
 
-- 只承载文章：首页、文章列表、文章详情、标签、归档、搜索。
+- 只承载文章：首页、内容索引、文章列表、文章详情、标签、归档、搜索。
 - 不承载个人展示、项目集、时间线、关于页、资源页或友情链接。
 - 微信小程序“知识速查”只消费从笔记中整理出的结构化速查数据，不镜像文章正文。
 - 跨端方案见 `docs/superpowers/specs/2026-10-23-notes-knowledge-coexistence.md`。
@@ -28,10 +28,11 @@ Li&Notes 是个人学习笔记站，负责完整 Markdown 笔记的写作、归�
 - 内容体检：内部链接、图片、空正文、短摘要、重复标题与超长标题。
 - 后台文章管理：状态、标签、置顶、封面、摘要、批量操作、CSV 导入导出。
 - 修订历史、回收站、媒体库、备份恢复与操作审计。
-- Fuse.js 本地搜索，构建期生成索引。
+- Fuse.js 本地搜索，构建期生成搜索索引；`/index/` 提供按年份与主题组织的公开内容索引。
 - 阅读进度、代码复制、目录、上一篇/下一篇与相关笔记。
 - 明暗主题跟随系统。
-- 文章可配置 `mini_json`，构建期导出小程序速查包与 `manifest.json`。
+- 文章可手写 `mini_json`；未配置时会从「命令速查」表格和代码块自动刮削小程序速查候选。
+- 后台“跨端”可查看索引健康、预览刮削结果、持久化回填和重建小程序 manifest。
 - 访问统计只记录路径与时间，不收集访客个人信息。
 
 ## 本地运行
@@ -49,7 +50,15 @@ docker compose --profile admin up -d
 
 > 文章与 `mini_json` 已纳入 Git。发布后请提交并推送，确保远端构建包含最新文章。
 
-文章编辑器中的“小程序同步配置（JSON）”使用：
+手写配置优先级最高。未填写 `mini_json` 的文章会按 `config/knowledge.yaml` 的 `auto_scrape` 规则自动刮削；文章显式写入 `{"enabled": false}` 时不会自动导出。
+
+自动候选可在后台「跨端 → 小程序同步」预览，确认后写回文章 frontmatter。写入的配置带：
+
+```json
+{"generated_by": "auto-scrape-v1"}
+```
+
+手写配置仍使用：
 
 ```json
 {
@@ -77,7 +86,7 @@ docker compose --profile admin up -d
 - `manifest.json`
 - `<contentVersion>.json`
 
-小程序只消费该结构化数据，不镜像文章正文。分类名称在后台“知识速查”中维护。
+小程序只消费该结构化数据，不镜像文章正文。分类名称、匹配关键词、自动刮削语言和数量限制在后台“知识速查”中维护；所有后台改动均原子写入 YAML/Markdown。
 
 ## 验证（推荐 Docker）
 
@@ -116,8 +125,9 @@ tests/                    # 单元与回归测试
 | 作者姓名与链接 | `config/profile.yaml` |
 | 导航、页面文案、空状态 | `config/strings.yaml` |
 | 颜色、阴影、动效 | `themes/blog-theme/static/css/tokens.css` |
-| 文章与小程序速查配置 | `content/posts/*.md` |
-| 小程序分类与最低版本 | `config/knowledge.yaml` |
+| 文章与已持久化的小程序速查配置 | `content/posts/*.md` |
+| 内容索引页文案 | `config/strings.yaml` |
+| 小程序分类、自动刮削规则与最低版本 | `config/knowledge.yaml` |
 
 ## 备案与安全
 
