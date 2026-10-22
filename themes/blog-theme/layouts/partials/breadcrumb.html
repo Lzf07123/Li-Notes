@@ -1,7 +1,11 @@
 {{ $strings := hugo.Data.strings }}
 {{ $crumb_title := .Title }}
+{{ if and (eq .Kind "taxonomy") (eq .Section "tags") }}{{ $crumb_title = $strings.tags.title }}{{ end }}
 {{ $section_title := "" }}
-{{ with .CurrentSection }}{{ $section_title = .Title }}{{ end }}
+{{ with .CurrentSection }}
+  {{ $section_title = .Title }}
+  {{ if and (eq .Kind "taxonomy") (eq .Section "tags") }}{{ $section_title = $strings.tags.title }}{{ end }}
+{{ end }}
 <nav class="breadcrumb" aria-label="{{ $strings.common.breadcrumb }}">
   <a href="{{ .Site.Home.RelPermalink }}">{{ $strings.nav.home }}</a>
   {{ with .CurrentSection }}

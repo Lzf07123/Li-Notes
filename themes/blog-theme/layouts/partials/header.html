@@ -41,7 +41,7 @@
         </summary>
         <nav class="site-menu-panel" aria-label="{{ $nav.menu }}">
           <a class="site-menu-item" href="{{ "posts/" | relURL }}" {{ if hasPrefix $current "/posts/" }}aria-current="page"{{ end }}>{{ $nav.posts }}</a>
-          <span class="site-menu-sep" aria-hidden="true"></span>
+          <a class="site-menu-item" href="{{ "archive/" | relURL }}" {{ if hasPrefix $current "/archive/" }}aria-current="page"{{ end }}>{{ $nav.archive }}</a>
         </nav>
       </details>
     </div>

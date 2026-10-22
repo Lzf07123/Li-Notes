@@ -1,9 +1,35 @@
 {{ define "main" }}
+{{ $strings := hugo.Data.strings }}
+{{ $brand := hugo.Data.brand }}
 {{ $posts := where .Site.RegularPages "Section" "posts" }}
 {{ $pinned := where $posts "Params.pinned" true }}
 {{ $normal := where $posts "Params.pinned" "ne" true }}
-<div class="post-list">
-  {{ range $pinned.ByDate.Reverse }}{{ partial "post-card.html" . }}{{ end }}
-  {{ range $normal.ByDate.Reverse }}{{ partial "post-card.html" . }}{{ end }}
-</div>
+{{ $latest := $posts.ByDate.Reverse | first 1 }}
+<section class="home-intro" aria-labelledby="home-heading">
+  <p class="page-eyebrow">{{ $strings.home.eyebrow }}</p>
+  <h1 id="home-heading" class="home-title">{{ $brand.tagline }}</h1>
+  <p class="home-intro-text">{{ $strings.home.intro }}</p>
+  <div class="home-facts">
+    <span class="home-fact"><strong>{{ len $posts }}</strong>{{ $strings.home.note_count }}</span>
+    <span class="home-fact"><strong>{{ len .Site.Taxonomies.tags }}</strong>{{ $strings.home.topic_count }}</span>
+    {{ with $latest }}
+    <span class="home-fact home-fact-date"><span>{{ $strings.home.latest_update }}</span><time datetime="{{ (index . 0).Date.Format "2006-01-02" }}">{{ (index . 0).Date.Format "2006-01-02" }}</time></span>
+    {{ end }}
+  </div>
+</section>
+<section class="home-feed" aria-labelledby="home-feed-title">
+  <div class="feed-heading">
+    <div>
+      <h2 id="home-feed-title">{{ $strings.home.latest_title }}</h2>
+    </div>
+    <a class="feed-link" href="{{ "posts/" | relURL }}">
+      {{ $strings.home.all_notes }}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+    </a>
+  </div>
+  <div class="post-list">
+    {{ range $pinned.ByDate.Reverse }}{{ partial "post-card.html" . }}{{ end }}
+    {{ range $normal.ByDate.Reverse }}{{ partial "post-card.html" . }}{{ end }}
+  </div>
+</section>
 {{ end }}

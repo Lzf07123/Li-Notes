@@ -1,13 +1,24 @@
 {{ define "main" }}
+{{ $strings := hugo.Data.strings }}
+{{ $isPosts := eq .Section "posts" }}
+{{ $posts := slice }}
+{{ if $isPosts }}{{ $posts = where .Site.RegularPages "Section" "posts" }}{{ end }}
 {{ partial "breadcrumb.html" . }}
-<h1 class="page-title">{{ .Title }}</h1>
-{{ with .Content }}<div class="page-intro">{{ . }}</div>{{ end }}
-{{ if eq .Section "posts" }}
+<header class="page-header">
+  <p class="page-eyebrow">{{ if $isPosts }}{{ $strings.posts.eyebrow }}{{ else }}{{ $strings.home.eyebrow }}{{ end }}</p>
+  <h1 class="page-title">{{ .Title }}</h1>
+  {{ if $isPosts }}
+  <p class="page-description">{{ $strings.posts.intro }}</p>
+  <p class="page-meta">{{ len $posts }} {{ $strings.home.note_count }}</p>
+  {{ else }}
+  {{ with .Content }}<div class="page-description">{{ . }}</div>{{ end }}
+  {{ end }}
+</header>
+{{ if $isPosts }}
   {{/* 置顶必须真正置顶：.Paginate 会对传入集合按日期重排（打乱置顶顺序），
        因此这里先构造“置顶优先 + 日期倒序”的完整集合，再按页码手工切片渲染。
        每页条数与 hugo.toml [pagination] pagerSize = 20 保持一致。 */}}
   {{ $pagerSize := 20 }}
-  {{ $posts := where .Site.RegularPages "Section" "posts" }}
   {{ $pinned := where $posts "Params.pinned" true }}
   {{ $normal := where $posts "Params.pinned" "ne" true }}
   {{ $ordered := $pinned.ByDate.Reverse | append $normal.ByDate.Reverse }}
@@ -32,7 +43,7 @@
       {{ end }}
     {{ end }}
     {{ else }}
-    {{ partial "empty-state.html" (dict "icon" "posts" "text" hugo.Data.strings.common.empty_posts "action" (dict "href" .Site.Home.RelPermalink "label" hugo.Data.strings.common.browse_home)) }}
+    {{ partial "empty-state.html" (dict "icon" "posts" "text" $strings.common.empty_posts "action" (dict "href" .Site.Home.RelPermalink "label" $strings.common.browse_home)) }}
     {{ end }}
   </div>
 {{ else }}
@@ -43,7 +54,7 @@
     {{ range $pinned.ByDate.Reverse }}{{ partial "post-card.html" . }}{{ end }}
     {{ range $normal.ByDate.Reverse }}{{ partial "post-card.html" . }}{{ end }}
     {{ else }}
-    {{ partial "empty-state.html" (dict "icon" "box" "text" hugo.Data.strings.common.empty_posts "action" (dict "href" .Site.Home.RelPermalink "label" hugo.Data.strings.common.browse_home)) }}
+    {{ partial "empty-state.html" (dict "icon" "box" "text" $strings.common.empty_posts "action" (dict "href" .Site.Home.RelPermalink "label" $strings.common.browse_home)) }}
     {{ end }}
   </div>
 {{ end }}

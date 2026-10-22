@@ -4,6 +4,7 @@
 <meta name="color-scheme" content="light dark">
 {{ $brand := hugo.Data.brand }}
 {{ $page_title := .Title }}
+{{ if and (eq .Kind "taxonomy") (eq .Section "tags") }}{{ $page_title = hugo.Data.strings.tags.title }}{{ end }}
 {{ $page_no := "" }}
 {{ if or (eq .Kind "section") (eq .Kind "taxonomy") (eq .Kind "term") }}{{ with .Paginator }}{{ if gt .PageNumber 1 }}{{ $page_no = printf "（第 %d 页）" .PageNumber }}{{ end }}{{ end }}{{ end }}
 <title>{{ if .IsHome }}{{ $brand.name }}{{ else }}{{ $page_title }}{{ $page_no }} · {{ $brand.name }}{{ end }}</title>
@@ -17,7 +18,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:type" content="{{ if eq .Kind "page" }}article{{ else }}website{{ end }}">
 <meta property="og:site_name" content="{{ $brand.name }}">
-<meta property="og:title" content="{{ if .IsHome }}{{ $brand.name }}{{ else }}{{ .Title }}{{ end }}">
+<meta property="og:title" content="{{ if .IsHome }}{{ $brand.name }}{{ else }}{{ $page_title }}{{ end }}">
 <meta property="og:description" content="{{ $desc }}">
 {{ if ne .Kind "404" }}<meta property="og:url" content="{{ .Permalink }}">{{ end }}
 {{ $og_image := "" }}
@@ -44,7 +45,7 @@
 <meta property="article:author" content="{{ hugo.Data.profile.name }}">
 {{ end }}
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="{{ if .IsHome }}{{ $brand.name }}{{ else }}{{ .Title }}{{ end }}">
+<meta name="twitter:title" content="{{ if .IsHome }}{{ $brand.name }}{{ else }}{{ $page_title }}{{ end }}">
 <meta name="twitter:description" content="{{ $desc }}">
 {{ with $og_image }}<meta name="twitter:image" content="{{ . | absURL }}"><meta name="twitter:image:alt" content="{{ $brand.name }}">{{ end }}
 {{/* theme-color 字面值与 tokens.css 的 --liblog-bg 浅/深值保持一致 */}}
@@ -86,17 +87,19 @@
 {{ $items := slice }}
 {{ range $i, $p := .Pages }}{{ $items = $items | append (dict "@type" "ListItem" "position" (add $i 1) "name" $p.Title "url" $p.Permalink) }}{{ end }}
 <script type="application/ld+json">
-{{ dict "@context" "https://schema.org" "@type" "ItemList" "name" .Title "numberOfItems" (len $items) "itemListElement" $items | jsonify | safeJS }}
+{{ dict "@context" "https://schema.org" "@type" "ItemList" "name" $page_title "numberOfItems" (len $items) "itemListElement" $items | jsonify | safeJS }}
 </script>
 {{ end }}
 {{ if not .IsHome }}
 {{ $crumb := slice (dict "@type" "ListItem" "position" 1 "name" hugo.Data.strings.nav.home "item" .Site.Home.Permalink) }}
+{{ $crumb_title := .Title }}
+{{ if and (eq .Kind "taxonomy") (eq .Section "tags") }}{{ $crumb_title = hugo.Data.strings.tags.title }}{{ end }}
 {{ $pos := 2 }}
 {{ if and .CurrentSection (ne .CurrentSection .Site.Home) }}
 {{ $crumb = $crumb | append (dict "@type" "ListItem" "position" $pos "name" .CurrentSection.Title "item" .CurrentSection.Permalink) }}
 {{ $pos = add $pos 1 }}
 {{ end }}
-{{ $crumb = $crumb | append (dict "@type" "ListItem" "position" $pos "name" .Title "item" .Permalink) }}
+{{ $crumb = $crumb | append (dict "@type" "ListItem" "position" $pos "name" $crumb_title "item" .Permalink) }}
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":{{ $crumb | jsonify | safeJS }}}
 </script>

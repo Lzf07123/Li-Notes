@@ -1,7 +1,13 @@
 {{ define "main" }}
-{{ partial "breadcrumb.html" . }}
-<h1 class="page-title">{{ .Title }}</h1>
+{{ $strings := hugo.Data.strings }}
 {{ $posts := where .Site.RegularPages "Section" "posts" }}
+{{ partial "breadcrumb.html" . }}
+<header class="page-header">
+  <p class="page-eyebrow">{{ $strings.archive.eyebrow }}</p>
+  <h1 class="page-title">{{ .Title }}</h1>
+  <p class="page-description">{{ $strings.archive.intro }}</p>
+  <p class="page-meta">{{ len $posts }} {{ $strings.home.note_count }}</p>
+</header>
 {{ if $posts }}
 <div class="archive">
   {{ range collections.Reverse ($posts.GroupByDate "2006") }}

@@ -1695,16 +1695,397 @@ mark {
 }
 .link-safety-cancel:hover { background: var(--liblog-surface-2); color: var(--liblog-fg); }
 
-/* ---------- 响应式（1280 目录折叠 / 1024 / 768 / 640 断点） ---------- */
-@media (max-width: 1504px) {
-  /* 留白不足以容纳 232px 悬浮目录时，折叠为正文上方，避免遮挡正文组件 */
-  .article-layout { display: block; }
-  .toc {
-    position: static;
-    width: auto;
-    max-height: 320px;
-    margin-bottom: 18px;
+/* ---------- 阅读路径：首页概览、页面层级与文章目录 ---------- */
+.page-header,
+.home-intro,
+.feed-heading,
+.archive,
+.pagination {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.page-header { padding: 2px 0 22px; }
+.page-eyebrow {
+  margin: 0;
+  color: var(--liblog-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+.page-title {
+  margin: 8px 0 12px;
+  color: var(--liblog-fg);
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.18;
+  text-align: left;
+  text-wrap: balance;
+}
+.page-description {
+  max-width: 640px;
+  margin: 0;
+  color: var(--liblog-muted);
+  font-size: 0.96rem;
+  line-height: 1.75;
+}
+.page-description p { margin: 0; }
+.page-meta {
+  margin: 12px 0 0;
+  color: var(--liblog-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.breadcrumb {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 16px;
+}
+.home-intro {
+  margin-top: 8px;
+  padding: 18px 0 30px;
+  border-bottom: 1px solid var(--liblog-border);
+}
+.home-title {
+  max-width: 680px;
+  margin: 10px 0 12px;
+  color: var(--liblog-brand-fg);
+  font-size: clamp(2.15rem, 4.2vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.14;
+}
+.home-intro-text {
+  max-width: 620px;
+  margin: 0;
+  color: var(--liblog-muted);
+  font-size: 1rem;
+  line-height: 1.85;
+}
+.home-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  align-items: center;
+  margin-top: 22px;
+  color: var(--liblog-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.home-fact {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 24px;
+}
+.home-fact strong {
+  color: var(--liblog-fg);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.home-fact-date {
+  gap: 8px;
+  padding-left: 22px;
+  border-left: 1px solid var(--liblog-border);
+}
+.home-fact-date time { color: var(--liblog-fg); font-weight: 600; }
+.home-feed { margin-top: 30px; }
+.feed-heading {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.feed-heading h2 {
+  margin: 4px 0 0;
+  color: var(--liblog-brand-fg);
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+.feed-link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 4px;
+  color: var(--liblog-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.feed-link svg { width: 16px; height: 16px; }
+.feed-link:hover { color: var(--liblog-primary); }
+.home-feed .post-list { margin-top: 16px; }
+
+.project-card, .post-card { padding: 22px 24px; }
+.post-card h2, .post-card h3 { margin-bottom: 7px; font-size: 1.12rem; line-height: 1.42; }
+.post-card .meta { line-height: 1.8; }
+.post-card .tag,
+.article-header .meta .tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin: 4px 0 0 6px;
+  padding: 0 8px;
+  border: 1px solid var(--liblog-border);
+  border-radius: 999px;
+  background: var(--liblog-surface-2);
+  color: var(--liblog-muted);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+.post-card .tag:hover,
+.article-header .meta .tag:hover {
+  border-color: var(--liblog-primary);
+  color: var(--liblog-primary);
+  text-decoration: none;
+}
+.list-year-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 30px 0 12px;
+  color: var(--liblog-brand-fg);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.list-year-heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--liblog-border);
+}
+.list-year-heading:first-of-type { margin-top: 4px; }
+.pagination {
+  justify-content: center;
+  margin-top: 28px;
+}
+.pagination-link { min-width: 44px; min-height: 44px; }
+.archive { gap: 32px; }
+.archive-year h2 {
+  margin: 0;
+  color: var(--liblog-brand-fg);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.archive-list { margin-top: 8px; gap: 0; }
+.archive-item {
+  gap: 18px;
+  min-height: 44px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--liblog-border);
+}
+.archive-item:last-child { border-bottom: 0; }
+.tag-cloud {
+  max-width: 860px;
+  margin: 24px auto 0;
+  justify-content: flex-start;
+}
+.tag-chip { min-height: 44px; }
+
+/* 文章页：标题与正文共享阅读栏宽，桌面端目录独立悬浮在右侧。 */
+.article-header {
+  max-width: 932px;
+  margin: 0 auto;
+}
+.article-header--single { max-width: 680px; }
+.article-header .breadcrumb {
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+.article-header .page-title,
+.article-header .meta,
+.article-header .article-cover { max-width: 680px; }
+.article .page-title,
+.article-header .page-title {
+  margin: 4px 0 12px;
+  font-size: clamp(2rem, 3.8vw, 2.9rem);
+  line-height: 1.22;
+  text-align: left;
+}
+.article-header .meta {
+  margin: 0;
+  line-height: 1.9;
+}
+.article-header .article-cover { margin-top: 26px; }
+.article-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 680px) 220px;
+  gap: 32px;
+  align-items: start;
+  justify-content: center;
+  margin-top: 30px;
+}
+.article-layout--single { grid-template-columns: minmax(0, 680px); }
+.article-main {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  max-width: 680px;
+}
+.article-aside {
+  position: sticky;
+  top: calc(var(--header-h) + 24px);
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  min-width: 0;
+}
+.article-toc {
+  max-height: calc(100dvh - var(--header-h) - 48px);
+  padding: 12px 14px;
+  overflow: auto;
+  border: 1px solid var(--liblog-glass-border-soft);
+  border-radius: 16px;
+  background:
+    var(--liblog-glass-shine),
+    var(--liblog-glass-bg-strong);
+  box-shadow: var(--liblog-shadow-sm),
+    inset 0 1px 0 var(--liblog-glass-highlight);
+  scrollbar-width: thin;
+}
+.article-toc-summary { display: none; }
+.article-toc-body { display: block; }
+.article-toc-title {
+  margin: 0 0 8px;
+  color: var(--liblog-fg);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.article-toc-body #TableOfContents ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.article-toc-body #TableOfContents ul ul {
+  margin-top: 2px;
+  padding-left: 10px;
+}
+.article-toc-body #TableOfContents li { margin: 2px 0; }
+.article-toc-body #TableOfContents a {
+  display: block;
+  padding: 5px 6px;
+  border-radius: 6px;
+  color: var(--liblog-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.article-toc-body #TableOfContents a:hover,
+.article-toc-body #TableOfContents a:focus-visible {
+  background: var(--liblog-surface-2);
+  color: var(--liblog-primary-hover);
+  text-decoration: none;
+}
+.article-body {
+  max-width: 100%;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.85;
+}
+.article-body p { margin: 0 0 1.15em; }
+.article-body h2 {
+  margin: 2.4em 0 0.8em;
+  padding-bottom: 0.38em;
+  border-bottom: 1px solid var(--liblog-border);
+  color: var(--liblog-brand-fg);
+  font-size: 1.48rem;
+  line-height: 1.36;
+}
+.article-body h3 {
+  margin: 2em 0 0.65em;
+  color: var(--liblog-brand-fg);
+  font-size: 1.16rem;
+  line-height: 1.45;
+}
+.article-body > h2:first-child { margin-top: 0; }
+.article-body ul,
+.article-body ol {
+  margin: 0 0 1.15em;
+  padding-left: 1.5em;
+}
+.article-body ul { list-style: disc; }
+.article-body ol { list-style: decimal; }
+.article-body li { margin: 0.3em 0; padding-left: 0.15em; }
+.article-body ul:has(> li > input[type="checkbox"]) {
+  padding-left: 0;
+  list-style: none;
+}
+.article-main .section-title { text-align: left; }
+.article-main .section-title::after { margin-left: 0; }
+.related-posts .post-list { max-width: 100%; }
+.post-nav { margin-top: 36px; }
+.post-nav-item { min-height: 44px; }
+
+@media (pointer: coarse) {
+  .post-card .tag,
+  .article-header .meta .tag {
+    min-height: 44px;
+    padding: 0 12px;
   }
+  .article-toc-body #TableOfContents a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .breadcrumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+/* ---------- 响应式（1280 目录折叠 / 1024 / 768 / 640 断点） ---------- */
+@media (max-width: 1120px) {
+  .article-layout,
+  .article-layout--single { display: block; }
+  .article-aside {
+    position: static;
+    max-width: 680px;
+    margin: 0 auto 20px;
+  }
+  .article-toc {
+    max-height: none;
+    padding: 0 14px;
+    overflow: visible;
+  }
+  .article-toc-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 46px;
+    color: var(--liblog-fg);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+  }
+  .article-toc-summary::-webkit-details-marker { display: none; }
+  .article-toc-summary svg {
+    width: 18px;
+    height: 18px;
+    color: var(--liblog-muted);
+    transition: transform var(--liblog-motion-fast) var(--liblog-ease-out);
+  }
+  .article-toc[open] .article-toc-summary svg { transform: rotate(180deg); }
+  .article-toc:not([open]) .article-toc-body { display: none; }
+  .article-toc-body {
+    padding: 8px 0 12px;
+    border-top: 1px solid var(--liblog-border);
+  }
+  .article-toc-title { display: none; }
+  .article-toc-body #TableOfContents a { padding: 8px 7px; }
 }
 @media (max-width: 1024px) {
   .page-shell { width: min(880px, calc(100% - 28px)); }
@@ -1712,7 +2093,10 @@ mark {
   .masonry { column-width: 240px; column-gap: 20px; }
 }
 @media (max-width: 768px) {
-  /* 移动端导航：首页/关于/搜索常驻，其余入口收进右上角二级菜单 */
+  /* 移动端导航：首页/搜索常驻，其余入口收进右上角二级菜单 */
+  .home-facts { gap: 8px 16px; }
+  .home-fact-date { padding-left: 16px; }
+  .feed-heading { align-items: center; }
   .site-nav { display: none; }
   .mobile-nav-primary {
     display: flex;
@@ -1749,7 +2133,7 @@ mark {
 @media (max-width: 640px) {
   .back-to-top { right: 14px; bottom: 16px; }
   .masonry { column-count: 1; column-gap: 0; }
-  .article-body { font-size: 0.95rem; }
+  .article-body { font-size: 1rem; }
   .article-body table {
     display: block;
     width: 100%;
@@ -1772,6 +2156,7 @@ mark {
   .site-header .brand-name-text { display: none; }
 }
 @media (max-width: 480px) {
+  .home-title { font-size: clamp(1.65rem, 7.2vw, 2.15rem); }
   .post-cover { max-height: 260px; }
   .article-cover img { max-height: 240px; }
   .hero { min-height: calc(100svh - var(--header-h) - 24px); }
@@ -1798,6 +2183,7 @@ mark {
   .ambient,
   .back-top,
   .back-to-top,
+  .article-aside,
   .to-top,
   .hero::before,
   .flow-rule,
@@ -1820,6 +2206,10 @@ mark {
     box-shadow: none;
   }
   .article-layout { display: block; }
+  .article-header,
+  .article-main {
+    max-width: none;
+  }
   .toc { display: none; }
   .article-body {
     max-width: none;

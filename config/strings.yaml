@@ -8,13 +8,33 @@ nav:
   menu: 更多
 
 home:
+  eyebrow: 学习档案
   latest_title: 最新笔记
+  intro: 完整学习笔记在这里按时间沉淀，随时回到曾经验证过的步骤与结论。
+  note_count: 篇笔记
+  topic_count: 个主题
+  latest_update: 最近更新
+  all_notes: 全部笔记
   result_count: 条结果
   no_results: 没有找到匹配内容，换个关键词试试
   browse_posts: 浏览全部笔记
   search_hint: 按标题、摘要与标签本地搜索，不上传任何内容
   search_placeholder: 输入关键词…
   related_title: 相关笔记
+
+posts:
+  eyebrow: 完整笔记
+  intro: 按置顶与时间整理，适合顺序浏览或回看。
+
+archive:
+  eyebrow: 时间索引
+  intro: 按年份回看每一次记录，找到当时留下的上下文与验证结果。
+
+tags:
+  eyebrow: 主题索引
+  title: 标签
+  intro: 从主题切入，找到相关笔记与可以继续追查的线索。
+  count_suffix: 个标签
 
 common:
   reading_time: 分钟阅读

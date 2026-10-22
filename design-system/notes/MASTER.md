@@ -1,6 +1,6 @@
 # Li&Notes 实现速览
 
-> 版本：v2.0 ｜ 日期：2026-10-23 ｜ 技术栈：Hugo + FastAPI + SQLite + Nginx
+> 版本：v2.1 ｜ 日期：2026-10-23 ｜ 技术栈：Hugo + FastAPI + SQLite + Nginx
 
 ## 1. 结构
 
@@ -83,3 +83,10 @@ HUGO_BIN=/path/to/hugo-0.165.0 python scripts/build.py --full
 - 暂保留 `themes/blog-theme` 与 `--liblog-*`，避免破坏数据卷、备份恢复和缓存。
 - 若后续重命名主题目录，必须同步 Dockerfile、compose、restore、build、tests 与旧备份迁移。
 - 网页端和小程序共存契约见 `docs/superpowers/specs/2026-10-23-notes-knowledge-coexistence.md`。
+
+## 8. 公开站阅读体验
+
+- 首页先展示紧凑的学习档案摘要（笔记数、主题数、最近更新），再直接进入笔记流，不扩展为个人主页 Hero。
+- 笔记、标签与归档页共用页面标题层级：来源眉题、唯一 H1、简述与统计；归档与标签按内容关系组织，不做装饰性时间线。
+- 文章页只保留模板生成的唯一 H1；桌面端目录固定在正文右侧，视口 ≤1120px 时折叠为原生可键盘操作的 `details`。
+- 移动端主导航固定保留首页与搜索，“更多”菜单提供笔记和归档入口。

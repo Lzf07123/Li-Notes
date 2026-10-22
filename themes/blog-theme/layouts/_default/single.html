@@ -4,76 +4,102 @@
 {{ $has_updated := and (gt .Lastmod.Year 1) (ne (.Date.Format "2006-01-02") (.Lastmod.Format "2006-01-02")) }}
 {{ $has_reading := .ReadingTime }}
 {{ $has_tags := .Params.tags }}
+{{/* 标题已经在页面模板中以 H1 呈现，移除正文开头重复的 Markdown H1。 */}}
+{{ $content := replaceRE `(?s)^\s*<h1[^>]*>.*?</h1>\s*` "" .Content }}
 <article class="article" data-copy="{{ $strings.common.copy_code }}" data-copied="{{ $strings.common.copy_code_done }}">
   <div class="reading-progress" aria-hidden="true"></div>
-  {{ partial "breadcrumb.html" . }}
-  {{ with .Params.cover }}
-  <figure class="article-cover">
-    {{ $cand := "" }}
-    {{ if hasPrefix . "/img/" }}{{ $cand = printf "themes/blog-theme/static%s" . }}
-    {{ else if hasPrefix . "/assets/" }}{{ $cand = printf "themes/blog-theme/static%s" . }}{{ end }}
-    {{ $w := "" }}{{ $h := "" }}
-    {{ if $cand }}{{ if fileExists $cand }}{{ with imageConfig $cand }}{{ $w = .Width }}{{ $h = .Height }}{{ end }}{{ end }}{{ end }}
-    <img src="{{ . | relURL }}" alt="{{ $.Title }}" loading="eager" decoding="async"{{ with $w }} width="{{ . }}"{{ end }}{{ with $h }} height="{{ . }}"{{ end }}>
-  </figure>
-  {{ end }}
-  <h1 class="page-title">{{ .Title }}</h1>
-  {{ if or $has_date $has_updated $has_reading $has_tags }}
-  <p class="meta">
-    {{ if $has_date }}
-    <time datetime="{{ .Date.Format "2006-01-02" }}">{{ $strings.common.published_at }} {{ .Date.Format "2006-01-02" }}</time>
+  <header class="article-header{{ if not .TableOfContents }} article-header--single{{ end }}">
+    {{ partial "breadcrumb.html" . }}
+    <h1 class="page-title">{{ .Title }}</h1>
+    {{ if or $has_date $has_updated $has_reading $has_tags }}
+    <p class="meta">
+      {{ if $has_date }}
+      <time datetime="{{ .Date.Format "2006-01-02" }}">{{ $strings.common.published_at }} {{ .Date.Format "2006-01-02" }}</time>
+      {{ end }}
+      {{ if $has_updated }}
+      <span class="meta-sep">·</span>
+      <time datetime="{{ .Lastmod.Format "2006-01-02" }}">{{ $strings.common.updated_at }} {{ .Lastmod.Format "2006-01-02" }}</time>
+      {{ end }}
+      {{ if $has_reading }}
+      <span class="meta-sep">·</span>
+      <span>{{ .ReadingTime }} {{ $strings.common.reading_time }}</span>
+      {{ end }}
+      {{ with .Params.tags }}{{ range . }}<a class="tag" href="{{ printf "/tags/%s/" (urlize .) | relURL }}">{{ . }}</a>{{ end }}{{ end }}
+    </p>
     {{ end }}
-    {{ if $has_updated }}
-    <span class="meta-sep">·</span>
-    <time datetime="{{ .Lastmod.Format "2006-01-02" }}">{{ $strings.common.updated_at }} {{ .Lastmod.Format "2006-01-02" }}</time>
+    {{ with .Params.cover }}
+    <figure class="article-cover">
+      {{ $cand := "" }}
+      {{ if hasPrefix . "/img/" }}{{ $cand = printf "themes/blog-theme/static%s" . }}
+      {{ else if hasPrefix . "/assets/" }}{{ $cand = printf "themes/blog-theme/static%s" . }}{{ end }}
+      {{ $w := "" }}{{ $h := "" }}
+      {{ if $cand }}{{ if fileExists $cand }}{{ with imageConfig $cand }}{{ $w = .Width }}{{ $h = .Height }}{{ end }}{{ end }}{{ end }}
+      <img src="{{ . | relURL }}" alt="{{ $.Title }}" loading="eager" decoding="async"{{ with $w }} width="{{ . }}"{{ end }}{{ with $h }} height="{{ . }}"{{ end }}>
+    </figure>
     {{ end }}
-    {{ if $has_reading }}
-    <span class="meta-sep">·</span>
-    <span>{{ .ReadingTime }} {{ $strings.common.reading_time }}</span>
-    {{ end }}
-    {{ with .Params.tags }}{{ range . }}<a class="tag" href="{{ printf "/tags/%s/" (urlize .) | relURL }}">{{ . }}</a>{{ end }}{{ end }}
-  </p>
-  {{ end }}
-  {{ if .TableOfContents }}
-  <div class="article-layout">
-    <aside class="toc" aria-label="{{ $strings.common.toc }}">
-      <p class="toc-title">{{ $strings.common.toc }}</p>
-      {{ .TableOfContents }}
+  </header>
+  <div class="article-layout{{ if not .TableOfContents }} article-layout--single{{ end }}">
+    {{ if .TableOfContents }}
+    <aside class="article-aside">
+      <details class="article-toc" aria-label="{{ $strings.common.toc }}" open>
+        <summary class="article-toc-summary">
+          <span>{{ $strings.common.toc }}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        </summary>
+        <div class="article-toc-body">
+          <p class="article-toc-title">{{ $strings.common.toc }}</p>
+          {{ .TableOfContents }}
+        </div>
+      </details>
+      <script>
+        (function () {
+          var toc = document.querySelector(".article-toc");
+          if (!toc) return;
+          var mobile = window.matchMedia("(max-width: 1120px)");
+          function syncToc() {
+            if (mobile.matches) toc.removeAttribute("open");
+            else toc.setAttribute("open", "");
+          }
+          syncToc();
+          if (mobile.addEventListener) mobile.addEventListener("change", syncToc);
+          else mobile.addListener(syncToc);
+        })();
+      </script>
     </aside>
-    <div class="article-body">{{ .Content }}</div>
-  </div>
-  {{ else }}
-  <div class="article-body">{{ .Content }}</div>
-  {{ end }}
-  {{ with $strings.footer.license }}
-  <p class="article-license">{{ $strings.common.license_prefix }} <a href="{{ $strings.footer.license_url }}" target="_blank" rel="noopener">{{ . }}</a></p>
-  {{ end }}
-  {{ if and (eq .Section "posts") (or .PrevInSection .NextInSection) }}
-  <nav class="post-nav" aria-label="{{ $strings.common.post_nav }}">
-    {{ with .PrevInSection }}
-    <a class="post-nav-item" href="{{ .RelPermalink }}">
-      <span>{{ $strings.common.prev }}</span>
-      {{ .Title }}
-    </a>
     {{ end }}
-    {{ with .NextInSection }}
-    <a class="post-nav-item post-nav-next" href="{{ .RelPermalink }}">
-      <span>{{ $strings.common.next }}</span>
-      {{ .Title }}
-    </a>
-    {{ end }}
-  </nav>
-  {{ end }}
-  {{ $related := where (.Site.RegularPages.Related .) "Section" "posts" | first 3 }}
-  {{ if and (eq .Section "posts") $related }}
-  <nav class="related-posts" aria-label="{{ $strings.home.related_title }}">
-    <h2 class="section-title">{{ $strings.home.related_title }}</h2>
-    <div class="post-list">
-      {{ range $related }}{{ partial "post-card.html" (dict "page" . "level" 3) }}{{ end }}
+    <div class="article-main">
+      <div class="article-body">{{ $content | safeHTML }}</div>
+      {{ with $strings.footer.license }}
+      <p class="article-license">{{ $strings.common.license_prefix }} <a href="{{ $strings.footer.license_url }}" target="_blank" rel="noopener">{{ . }}</a></p>
+      {{ end }}
+      {{ if and (eq .Section "posts") (or .PrevInSection .NextInSection) }}
+      <nav class="post-nav" aria-label="{{ $strings.common.post_nav }}">
+        {{ with .PrevInSection }}
+        <a class="post-nav-item" href="{{ .RelPermalink }}">
+          <span>{{ $strings.common.prev }}</span>
+          {{ .Title }}
+        </a>
+        {{ end }}
+        {{ with .NextInSection }}
+        <a class="post-nav-item post-nav-next" href="{{ .RelPermalink }}">
+          <span>{{ $strings.common.next }}</span>
+          {{ .Title }}
+        </a>
+        {{ end }}
+      </nav>
+      {{ end }}
+      {{ $related := where (.Site.RegularPages.Related .) "Section" "posts" | first 3 }}
+      {{ if and (eq .Section "posts") $related }}
+      <nav class="related-posts" aria-label="{{ $strings.home.related_title }}">
+        <h2 class="section-title">{{ $strings.home.related_title }}</h2>
+        <div class="post-list">
+          {{ range $related }}{{ partial "post-card.html" (dict "page" . "level" 3) }}{{ end }}
+        </div>
+      </nav>
+      {{ end }}
+      {{ if ge .WordCount 300 }}<p class="back-top"><a href="#main">{{ $strings.common.top }}</a></p>{{ end }}
     </div>
-  </nav>
-  {{ end }}
-  {{ if ge .WordCount 300 }}<p class="back-top"><a href="#main">{{ $strings.common.top }}</a></p>{{ end }}
+  </div>
 </article>
 
 {{ end }}
