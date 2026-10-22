@@ -373,6 +373,24 @@ class AdminRoutesTest(unittest.TestCase):
             self.assertNotIn(">时间线<", r.text)
             self.assertNotIn("友情链接", r.text)
 
+    def test_auth_footer_renders_official_filing_links(self):
+        (settings.config_root / "brand.yaml").write_text(
+            "name: Li&Notes\n"
+            "icp: 粤ICP备2026008710号-1\n"
+            "icp_url: https://beian.miit.gov.cn/\n"
+            "police: 粤公网安备44010402003600号\n"
+            "police_url: https://beian.mps.gov.cn/\n",
+            encoding="utf-8",
+        )
+        with TestClient(app) as client:
+            r = client.get("/admin/login")
+            self.assertEqual(r.status_code, 200)
+            self.assertIn("https://beian.miit.gov.cn/", r.text)
+            self.assertIn("https://beian.mps.gov.cn/", r.text)
+            self.assertIn("ICP备案", r.text)
+            self.assertIn("公安联网备案", r.text)
+            self.assertIn("noopener noreferrer nofollow", r.text)
+
     def test_post_edit_renders_mini_json_editor(self):
         store.write_markdown(
             "posts",

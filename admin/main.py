@@ -355,6 +355,13 @@ def render(request: Request, name: str, context: dict) -> HTMLResponse:
     context.setdefault("asset_version", _asset_version())
     context.setdefault("year", datetime.date.today().year)
     context.setdefault("footer_icon_fallback", _footer_icon_fallback())
+    try:
+        footer_strings = store.load_yaml("strings").get("footer") or {}
+    except (OSError, ValueError, AttributeError):
+        footer_strings = {}
+    context.setdefault("filing_label", footer_strings.get("filing_label", "备案信息"))
+    context.setdefault("icp_label", footer_strings.get("icp_label", "ICP备案"))
+    context.setdefault("police_label", footer_strings.get("police_label", "公安联网备案"))
     return templates.TemplateResponse(request, name, context)
 
 

@@ -1,9 +1,9 @@
 <footer class="auth-footer">
   <p class="auth-footer-copy">{{ brand.copyright | replace("{year}", year|string) }}</p>
-  <div class="auth-footer-beian">
+  <div class="auth-footer-beian" aria-label="{{ filing_label }}">
     {% if brand.icp %}
     <span class="footer-filing">
-      <a class="beian-link" href="{{ brand.icp_url }}" rel="nofollow" target="_blank">
+      <a class="beian-link" href="{{ brand.icp_url }}" rel="noopener noreferrer nofollow" target="_blank" aria-label="{{ icp_label }} {{ brand.icp }}">
         <span class="beian-icon" aria-hidden="true">
           {% if brand.icp_icon %}
           <img class="beian-icon-img" src="{{ brand.icp_icon }}" alt="" onerror="this.outerHTML='<span class=&quot;filing-icon-placeholder&quot;>{{ footer_icon_fallback }}</span>'">
@@ -11,14 +11,14 @@
           <span class="filing-icon-placeholder">{{ footer_icon_fallback }}</span>
           {% endif %}
         </span>
-        <span class="beian-text">{{ brand.icp }}</span>
+        <span class="beian-text">{{ icp_label }} {{ brand.icp }}</span>
       </a>
     </span>
     {% endif %}
     {% if brand.police %}
     <span class="footer-filing">
       {% if brand.icp %}<span aria-hidden="true" class="footer-sep">·</span>{% endif %}
-      <a class="beian-link" href="{{ brand.police_url }}" rel="nofollow" target="_blank">
+      <a class="beian-link" href="{{ brand.police_url }}" rel="noopener noreferrer nofollow" target="_blank" aria-label="{{ police_label }} {{ brand.police }}">
         <span class="beian-icon" aria-hidden="true">
           {% if brand.police_icon %}
           <img class="beian-icon-img" src="{{ brand.police_icon }}" alt="" onerror="this.outerHTML='<span class=&quot;filing-icon-placeholder&quot;>{{ footer_icon_fallback }}</span>'">
@@ -26,7 +26,7 @@
           <span class="filing-icon-placeholder">{{ footer_icon_fallback }}</span>
           {% endif %}
         </span>
-        <span class="beian-text">{{ brand.police }}</span>
+        <span class="beian-text">{{ police_label }} {{ brand.police }}</span>
       </a>
     </span>
     {% endif %}

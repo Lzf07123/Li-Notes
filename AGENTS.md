@@ -27,7 +27,7 @@ Li&Notes 只负责完整文章域：首页、文章列表、详情、标签、�
 1. **单一事实来源**：品牌文案只存 `config/brand.yaml`；作者资料只存 `config/profile.yaml`；站点文案只存 `config/strings.yaml`；颜色/阴影/动效只存 `tokens.css`。组件禁止硬编码可见文案与裸 hex。
 2. **公开站零交互**：不得引入评论、留言、注册、登录、表单或用户输入栏目。
 3. **全站可见内容后台可改**：新增可见内容必须同步后台入口并更新 `design-system/notes/MASTER.md`。
-4. **备案红线**：备案号禁止假占位；页脚备案链接指向官方域名；公开站不收集个人信息。
+4. **备案红线**：备案号禁止假占位；ICP 链接指向工信部，公安备案链接指向 `beian.mps.gov.cn`；号码为空时隐藏；公开站不收集个人信息。
 5. **秘密与安全**：OIDC secret、密码等只走环境变量/.env/secret 文件；后台路径保持秘密；禁止 Docker socket；运行期以 UID 1000 非 root 运行。
 6. **Markdown 为内容源**：文章与页面使用 Markdown/YAML，构建期渲染，禁止公开页运行时 Markdown 解析。
 7. **性能底线**：公开站纯静态；动效尊重 `prefers-reduced-motion`；禁止外部 CDN、远程字体和远程 JS。
