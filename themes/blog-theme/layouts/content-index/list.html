@@ -1,0 +1,52 @@
+{{ define "main" }}
+{{ $strings := hugo.Data.strings }}
+{{ $posts := where .Site.RegularPages "Section" "posts" }}
+{{ partial "breadcrumb.html" . }}
+<header class="page-header">
+  <p class="page-eyebrow">{{ $strings.index.eyebrow }}</p>
+  <h1 class="page-title">{{ .Title }}</h1>
+  <p class="page-description">{{ $strings.index.intro }}</p>
+  <p class="page-meta">{{ len $posts }} {{ $strings.home.note_count }}</p>
+</header>
+<div class="index-actions">
+  <a class="btn btn-secondary" href="{{ "posts/" | relURL }}">{{ $strings.index.browse_notes }}</a>
+  <a class="btn btn-ghost" href="{{ "archive/" | relURL }}">{{ $strings.index.browse_archive }}</a>
+  <a class="btn btn-ghost" href="{{ "tags/" | relURL }}">{{ $strings.index.browse_tags }}</a>
+</div>
+<section class="index-topics" aria-labelledby="index-topics-title">
+  <h2 id="index-topics-title">{{ $strings.index.topics_title }}</h2>
+  <div class="tag-cloud">
+    {{ range first 16 .Site.Taxonomies.tags.ByCount }}
+    <a class="tag-chip" href="{{ .Page.RelPermalink }}">{{ .Page.Title }}<span class="tag-chip-count">{{ .Count }}</span></a>
+    {{ end }}
+  </div>
+</section>
+<section class="content-index" aria-labelledby="index-entries-title">
+  <h2 id="index-entries-title">{{ $strings.index.entries_title }}</h2>
+  {{ range collections.Reverse ($posts.GroupByDate "2006") }}
+  <section class="index-year" id="year-{{ .Key }}">
+    <header class="index-year-head">
+      <h3>{{ .Key }}</h3>
+      <span>{{ len .Pages }} {{ $strings.home.note_count }}</span>
+    </header>
+    <ol class="index-list">
+      {{ range .Pages.ByDate.Reverse }}
+      <li class="index-entry">
+        {{ $summary := .Params.summary | default .Params.description }}
+        <div class="index-entry-main">
+          <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+          {{ with $summary }}<p>{{ . | plainify | truncate 160 "…" }}</p>{{ end }}
+        </div>
+        <div class="index-entry-meta">
+          <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006-01-02" }}</time>
+          <div class="index-entry-tags">
+            {{ range .Params.tags }}<a href="{{ printf "/tags/%s/" (urlize .) | relURL }}">{{ . }}</a>{{ end }}
+          </div>
+        </div>
+      </li>
+      {{ end }}
+    </ol>
+  </section>
+  {{ end }}
+</section>
+{{ end }}

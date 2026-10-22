@@ -22,6 +22,7 @@
       <a class="site-nav-link inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" href="{{ .Site.Home.RelPermalink }}" {{ if eq $current .Site.Home.RelPermalink }}aria-current="page"{{ end }}>{{ $nav.home }}</a>
       <a class="site-nav-link inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" href="{{ "posts/" | relURL }}" {{ if hasPrefix $current "/posts/" }}aria-current="page"{{ end }}>{{ $nav.posts }}</a>
 <a class="site-nav-link inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" href="{{ "archive/" | relURL }}" {{ if hasPrefix $current "/archive/" }}aria-current="page"{{ end }}>{{ $nav.archive }}</a>
+      <a class="site-nav-link inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" href="{{ "index/" | relURL }}" {{ if hasPrefix $current "/index/" }}aria-current="page"{{ end }}>{{ $nav.index }}</a>
       <button type="button" class="nav-search-btn inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" data-open-search aria-controls="search-modal" aria-expanded="false" aria-keyshortcuts="Control+K">{{ $nav.search }}</button>
     </nav>
     <nav class="mobile-nav-primary" aria-label="主导航">
@@ -42,6 +43,7 @@
         <nav class="site-menu-panel" aria-label="{{ $nav.menu }}">
           <a class="site-menu-item" href="{{ "posts/" | relURL }}" {{ if hasPrefix $current "/posts/" }}aria-current="page"{{ end }}>{{ $nav.posts }}</a>
           <a class="site-menu-item" href="{{ "archive/" | relURL }}" {{ if hasPrefix $current "/archive/" }}aria-current="page"{{ end }}>{{ $nav.archive }}</a>
+          <a class="site-menu-item" href="{{ "index/" | relURL }}" {{ if hasPrefix $current "/index/" }}aria-current="page"{{ end }}>{{ $nav.index }}</a>
         </nav>
       </details>
     </div>

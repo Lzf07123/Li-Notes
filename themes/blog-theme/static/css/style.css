@@ -2027,6 +2027,137 @@ mark {
 .post-nav { margin-top: 36px; }
 .post-nav-item { min-height: 44px; }
 
+/* ---------- 内容索引 ---------- */
+.index-actions,
+.index-topics,
+.content-index {
+  max-width: 820px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.index-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  margin-bottom: 30px;
+}
+.index-topics {
+  padding: 24px 0 6px;
+  border-top: 1px solid var(--liblog-border);
+}
+.index-topics h2,
+.content-index > h2 {
+  margin: 0 0 16px;
+  color: var(--liblog-brand-fg);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.index-topics .tag-cloud {
+  max-width: none;
+  margin: 0;
+}
+.content-index { margin-top: 34px; }
+.index-year + .index-year { margin-top: 36px; }
+.index-year-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--liblog-border);
+}
+.index-year-head h3 {
+  margin: 0;
+  color: var(--liblog-brand-fg);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.index-year-head span {
+  color: var(--liblog-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.index-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.index-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: start;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--liblog-border);
+}
+.index-entry-main { min-width: 0; }
+.index-entry-main > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--liblog-fg);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+.index-entry-main > a:hover { color: var(--liblog-primary-hover); }
+.index-entry-main p {
+  margin: 4px 0 0;
+  color: var(--liblog-muted);
+  font-size: 0.86rem;
+  line-height: 1.7;
+}
+.index-entry-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 150px;
+  color: var(--liblog-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.index-entry-meta time { white-space: nowrap; }
+.index-entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.index-entry-tags a {
+  padding: 2px 7px;
+  border: 1px solid var(--liblog-border);
+  border-radius: 999px;
+  background: var(--liblog-surface-2);
+  color: var(--liblog-muted);
+  font-size: 0.7rem;
+}
+.index-entry-tags a:hover {
+  border-color: var(--liblog-primary);
+  color: var(--liblog-primary);
+  text-decoration: none;
+}
+@media (pointer: coarse) {
+  .index-entry-main > a,
+  .index-entry-tags a,
+  .index-actions .btn {
+    min-height: 44px;
+  }
+}
+@media (max-width: 640px) {
+  .index-entry {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .index-entry-meta {
+    align-items: flex-start;
+    min-width: 0;
+  }
+  .index-entry-tags { justify-content: flex-start; }
+}
+
 @media (pointer: coarse) {
   .post-card .tag,
   .article-header .meta .tag {

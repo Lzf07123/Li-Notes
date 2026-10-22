@@ -28,7 +28,7 @@
             {% set row_index = loop.index0 %}
             <tr>
               {% for col in field.columns %}
-              <td><input type="{{ col.get('input', 'text') }}" name="{{ field.name }}[{{ row_index }}][{{ col.key }}]" value="{{ row.get(col.key, '') }}"></td>
+              <td><input type="{{ 'text' if col.get('input') == 'csv' else col.get('input', 'text') }}" name="{{ field.name }}[{{ row_index }}][{{ col.key }}]" value="{{ row.get(col.key, '') }}"></td>
               {% endfor %}
               <td><button type="button" class="btn-link danger list-remove">删除</button></td>
             </tr>

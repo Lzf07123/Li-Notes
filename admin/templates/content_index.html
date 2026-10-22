@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}内容索引 · Li&Notes 后台{% endblock %}
+{% block content %}
+<nav class="admin-breadcrumb" aria-label="面包屑">
+  <a href="/{{ admin_path }}/">仪表盘</a>
+  <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
+  <span aria-current="page">内容索引</span>
+</nav>
+<div class="dashboard-head">
+  <div>
+    <h1>内容索引</h1>
+    <p class="field-help">恢复并维护公开站的文章索引、搜索索引与小程序导出状态。</p>
+  </div>
+  <a class="btn btn-secondary" href="/index/" target="_blank" rel="noopener">打开公开索引</a>
+</div>
+
+<div class="stat-cards">
+  <div class="stat-card"><span>已发布笔记</span><strong>{{ post_count }}</strong></div>
+  <div class="stat-card"><span>标签</span><strong>{{ tag_count }}</strong></div>
+  <div class="stat-card"><span>搜索记录</span><strong>{{ status.count }}</strong></div>
+  <div class="stat-card"><span>小程序条目</span><strong>{{ knowledge_status.count }}</strong></div>
+  <div class="stat-card"><span>索引状态</span><strong>{{ "正常" if status.valid else "待重建" }}</strong></div>
+</div>
+
+<div class="admin-card">
+  <h2>搜索索引</h2>
+  {% if status.valid %}
+  <p>
+    <span class="admin-badge admin-badge--published">可用</span>
+    {{ status.count }} 条记录 · {{ (status.size / 1024)|round(1) }} KB · 生成于 {{ status.mtime }}
+  </p>
+  {% elif status.exists %}
+  <p><span class="admin-badge admin-badge--danger">格式异常</span> {{ status.error }}</p>
+  {% else %}
+  <p><span class="admin-badge admin-badge--danger">尚未生成</span> 执行全量重建后会生成搜索索引。</p>
+  {% endif %}
+  <p class="field-help">搜索只读取构建期 JSON；查询内容不上传服务器。</p>
+  <div class="quick-actions">
+    <a class="btn btn-secondary btn-sm" href="/search/index.json" target="_blank" rel="noopener">查看搜索 JSON</a>
+    <a class="btn btn-secondary btn-sm" href="/index/" target="_blank" rel="noopener">查看内容索引</a>
+    <a class="btn btn-secondary btn-sm" href="/knowledge/manifest.json" target="_blank" rel="noopener">小程序 Manifest</a>
+    <form method="post" action="/{{ admin_path }}/rebuild" data-busy>
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <button type="submit" class="btn btn-secondary btn-sm">重建全部索引</button>
+    </form>
+  </div>
+</div>
+
+<div class="admin-card">
+  <h2>小程序导出</h2>
+  {% if knowledge_status.valid %}
+  <p><span class="admin-badge admin-badge--published">校验通过</span> {{ knowledge_status.count }} 条 · {{ knowledge_status.version }}</p>
+  {% elif knowledge_status.exists %}
+  <p><span class="admin-badge admin-badge--danger">校验失败</span> {{ knowledge_status.error }}</p>
+  {% else %}
+  <p><span class="admin-badge admin-badge--danger">尚未生成</span> 执行全量重建后会生成小程序 manifest。</p>
+  {% endif %}
+  <p class="field-help">自动刮削候选在“跨端 → 小程序同步”中确认持久化。</p>
+</div>
+
+<div class="admin-card">
+  <h2>构建状态</h2>
+  <p>
+    最近构建 {{ latest_build.built_at or "尚未构建" }} ·
+    {{ latest_build.asset_count }} 个静态资源指纹
+  </p>
+  <p>
+    内容索引页
+    <span class="admin-badge {{ 'admin-badge--published' if public_index_exists else 'admin-badge--danger' }}">
+      {{ "已生成" if public_index_exists else "缺失" }}
+    </span>
+  </p>
+</div>
+
+<h2>最近索引记录</h2>
+{% if public_entries %}
+<div class="table-shell-wrap">
+  <table class="table-shell">
+    <thead><tr><th>标题</th><th>日期</th><th>标签</th><th>链接</th></tr></thead>
+    <tbody>
+      {% for entry in public_entries %}
+      <tr>
+        <td>{{ entry.title }}</td>
+        <td>{{ entry.date }}</td>
+        <td>{{ (entry.tags or [])|join(" · ") }}</td>
+        <td><a href="{{ entry.url }}" target="_blank" rel="noopener">打开</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="field-help">构建完成后会在这里显示最近的索引记录。</p>
+{% endif %}
+{% endblock %}

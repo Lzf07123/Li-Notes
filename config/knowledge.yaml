@@ -1,16 +1,27 @@
 # 微信小程序速查导出配置（后台“知识速查”可编辑）
 schema_version: 1
 min_app_version: "0.2.0"
+auto_scrape:
+  enabled: true
+  default_category: ""
+  include_languages: [bash, shell, sh, console, yaml]
+  max_items_per_article: 3
+  max_examples: 3
+  max_code_chars: 6000
+  min_code_chars: 8
 categories:
 - id: linux
   label: Linux
   intro: 包管理与常用命令
   symbol: L
+  match_terms: [linux, bash, shell, apt, dpkg, rpm, dnf, yum, pacman, 命令]
 - id: kubernetes
   label: Kubernetes
   intro: 工作负载、网络与排错
   symbol: K
+  match_terms: [kubernetes, k8s, kubectl, pod, 集群, 容器云, helm, ingress, prometheus]
 - id: markdown
   label: Markdown
   intro: 常用写法与扩展语法
   symbol: M
+  match_terms: [markdown, frontmatter, hugo, 写作]

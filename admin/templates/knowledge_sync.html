@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}小程序同步 · Li&Notes 后台{% endblock %}
+{% block content %}
+<nav class="admin-breadcrumb" aria-label="面包屑">
+  <a href="/{{ admin_path }}/">仪表盘</a>
+  <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
+  <span aria-current="page">小程序同步</span>
+</nav>
+<div class="dashboard-head">
+  <div>
+    <h1>小程序同步</h1>
+    <p class="field-help">自动从文章命令表和代码块刮削速查候选；确认后写入 Markdown frontmatter，重建时生成 manifest。</p>
+  </div>
+  <a class="btn btn-secondary" href="/{{ admin_path }}/config/knowledge">刮削设置</a>
+</div>
+
+{% if sync_error %}<p class="flash flash--error" role="alert">{{ sync_error }}</p>{% endif %}
+{% if report %}
+<div class="stat-cards">
+  <div class="stat-card"><span>手写/已持久化</span><strong>{{ report.manual + report.generated }}</strong></div>
+  <div class="stat-card"><span>自动候选</span><strong>{{ report.auto }}</strong></div>
+  <div class="stat-card"><span>候选条目</span><strong>{{ report.auto_items }}</strong></div>
+  <div class="stat-card"><span>已跳过</span><strong>{{ report.skipped }}</strong></div>
+</div>
+
+<div class="admin-card">
+  <h2>自动刮削设置</h2>
+  <p>
+    功能
+    <span class="admin-badge {{ 'admin-badge--published' if report.config.auto_scrape.enabled else 'admin-badge--danger' }}">
+      {{ "已开启" if report.config.auto_scrape.enabled else "已关闭" }}
+    </span>
+    · 语言 {{ report.config.auto_scrape.include_languages|join(" / ") }}
+    · 命令表最多 {{ report.config.auto_scrape.max_items_per_article }} 条/篇
+  </p>
+  <p class="field-help">手写 <code>mini_json</code> 或已经回填的配置优先于自动候选；文章显式写 <code>{"enabled": false}</code> 时永不覆盖。</p>
+</div>
+
+{% if records_by_status.auto %}
+<h2>待持久化候选</h2>
+<form method="post" action="/{{ admin_path }}/knowledge-sync/persist">
+  <input type="hidden" name="_csrf" value="{{ csrf }}">
+  <div class="table-shell-wrap">
+    <table class="table-shell">
+      <thead><tr><th><button type="button" class="btn-link" data-select-group="auto-records">全选</button></th><th>文章</th><th>分类</th><th>条目</th><th>候选</th></tr></thead>
+      <tbody>
+        {% for record in records_by_status.auto %}
+        <tr>
+          <td><input type="checkbox" name="slugs" value="{{ record.slug }}" data-select-item="auto-records" aria-label="选择 {{ record.title }}"></td>
+          <td><a href="/{{ admin_path }}/posts/{{ record.slug }}/edit">{{ record.title }}</a><br><small>{{ record.slug }}</small></td>
+          <td>{{ record.category }}</td>
+          <td>{{ record.item_count }}</td>
+          <td>
+            {% for item in record["items"][:3] %}
+            <small><strong>{{ item.title }}</strong> · <code>{{ item.command }}</code></small>{% if not loop.last %}<br>{% endif %}
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="form-actions">
+    <button type="submit" name="action" value="persist" class="btn" data-busy>写入选中文章并重建</button>
+  </div>
+</form>
+{% else %}
+<p class="field-help">没有待持久化的自动候选。新增包含命令表或代码块的文章后，再来这里确认。</p>
+{% endif %}
+
+{% if records_by_status.generated %}
+<h2>已持久化自动配置</h2>
+<form method="post" action="/{{ admin_path }}/knowledge-sync/persist">
+  <input type="hidden" name="_csrf" value="{{ csrf }}">
+  <div class="table-shell-wrap">
+    <table class="table-shell">
+      <thead><tr><th><button type="button" class="btn-link" data-select-group="generated-records">全选</button></th><th>文章</th><th>分类</th><th>条目</th></tr></thead>
+      <tbody>
+        {% for record in records_by_status.generated %}
+        <tr>
+          <td><input type="checkbox" name="slugs" value="{{ record.slug }}" data-select-item="generated-records" aria-label="选择 {{ record.title }}"></td>
+          <td><a href="/{{ admin_path }}/posts/{{ record.slug }}/edit">{{ record.title }}</a><br><small>{{ record.slug }}</small></td>
+          <td>{{ record.category }}</td>
+          <td>{{ record.item_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="form-actions">
+    <button type="submit" name="action" value="refresh" class="btn btn-secondary">刷新选中配置</button>
+    <button type="submit" name="action" value="clear" class="btn btn-ghost" data-confirm-clear>清除选中配置</button>
+  </div>
+</form>
+{% endif %}
+
+{% if records_by_status.manual %}
+<h2>手写速查</h2>
+<div class="table-shell-wrap">
+  <table class="table-shell">
+    <thead><tr><th>文章</th><th>分类</th><th>条目</th></tr></thead>
+    <tbody>
+      {% for record in records_by_status.manual %}
+      <tr><td><a href="/{{ admin_path }}/posts/{{ record.slug }}/edit">{{ record.title }}</a></td><td>{{ record.category }}</td><td>{{ record.item_count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if records_by_status.skipped %}
+<h2>未导出</h2>
+<ul class="draft-list">
+  {% for record in records_by_status.skipped %}
+  <li><span class="admin-tag admin-tag--muted">{{ record.reason }}</span> {{ record.title }}<time>{{ record.slug }}</time></li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endif %}
+<script>
+  (function () {
+    document.querySelectorAll("[data-select-group]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var group = button.dataset.selectGroup;
+        var boxes = Array.prototype.slice.call(document.querySelectorAll('[data-select-item="' + group + '"]'));
+        var allChecked = boxes.length > 0 && boxes.every(function (box) { return box.checked; });
+        boxes.forEach(function (box) { box.checked = !allChecked; });
+      });
+    });
+    document.querySelectorAll("[data-confirm-clear]").forEach(function (button) {
+      button.addEventListener("click", function (event) {
+        if (!window.confirm("清除选中文章的自动生成配置？文章正文不会受影响。")) event.preventDefault();
+      });
+    });
+  })();
+</script>
+{% endblock %}

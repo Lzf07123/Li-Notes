@@ -11,6 +11,7 @@
 
 - 文章：{{ "posts/" | relURL }}
 - 归档：{{ "archive/" | relURL }}
+- 内容索引：{{ "index/" | relURL }}
 - 搜索：{{ "search/" | relURL }}
 
 ## 最新笔记

@@ -53,7 +53,11 @@ def parse_config(data: dict, fields: list[dict], form) -> tuple[Optional[dict], 
                     raw = form.get(f"{name}[{idx}][{key}]")
                     if raw is None:
                         continue
-                    row[key] = str(raw).strip()
+                    value = str(raw).strip()
+                    if col.get("input") == "csv":
+                        row[key] = [part.strip() for part in value.split(",") if part.strip()]
+                    else:
+                        row[key] = value
                 if any(row.values()):
                     rows.append(row)
             nested_set(data, path, rows)

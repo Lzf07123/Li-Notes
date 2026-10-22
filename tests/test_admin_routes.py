@@ -7,6 +7,8 @@ import types
 import unittest
 import urllib.parse
 import zipfile
+
+import yaml
 from pathlib import Path
 from unittest import mock
 
@@ -14,7 +16,7 @@ from fastapi.testclient import TestClient
 
 os.environ.setdefault("LIBLOG_BOOTSTRAP_BUILD", "0")
 
-from admin import content as store, media, security
+from admin import content as store, knowledge, media, security
 from admin.config import settings
 from admin.db import connect, create_admin, init_db
 from admin.main import app, build, rewrite_preview_html, safe_stats_href
@@ -851,6 +853,156 @@ class AdminRoutesTest(unittest.TestCase):
             self.assertIn('name="links[0][label]"', r.text)
             self.assertIn('name="links[0][href]"', r.text)
             self.assertNotIn('name="links[1][label]"', r.text)
+
+    def _write_knowledge_config(self):
+        (settings.config_root / "knowledge.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "schema_version": 1,
+                    "min_app_version": "0.2.0",
+                    "categories": [
+                        {
+                            "id": "kubernetes",
+                            "label": "Kubernetes",
+                            "intro": "容器云",
+                            "symbol": "K",
+                            "match_terms": ["kubernetes", "k8s"],
+                        }
+                    ],
+                },
+                allow_unicode=True,
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
+
+    def _write_scrapable_post(self):
+        (settings.content_root / "posts" / "k8s-auto.md").write_text(
+            "---\n"
+            "title: 自动刮削测试\n"
+            "date: 2026-10-23\n"
+            "status: published\n"
+            "tags:\n"
+            "- Kubernetes\n"
+            "---\n\n"
+            "## 🎯 今日目标\n\n"
+            "- [ ] 查看节点\n\n"
+            "## 📋 命令速查\n\n"
+            "| 命令 | 功能 | 注解 |\n"
+            "| --- | --- | --- |\n"
+            "| `kubectl get nodes` | 查看节点 | 检查 Ready |\n",
+            encoding="utf-8",
+        )
+
+    def test_knowledge_sync_lists_auto_candidates(self):
+        self._write_knowledge_config()
+        self._write_scrapable_post()
+        with TestClient(app) as client:
+            self._login(client)
+            r = client.get("/admin/knowledge-sync")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("待持久化候选", r.text)
+        self.assertIn("k8s-auto", r.text)
+        self.assertIn("kubectl get nodes", r.text)
+
+    def test_knowledge_sync_persists_generated_frontmatter(self):
+        self._write_knowledge_config()
+        self._write_scrapable_post()
+        with TestClient(app) as client:
+            csrf = self._login(client)
+            with mock.patch("admin.main.build_state.trigger_build") as trigger:
+                r = client.post(
+                    "/admin/knowledge-sync/persist",
+                    data={
+                        "_csrf": csrf,
+                        "action": "persist",
+                        "slugs": "k8s-auto",
+                    },
+                    follow_redirects=False,
+                )
+            self.assertEqual(r.status_code, 303)
+            trigger.assert_called_once()
+        fm, body = store.read_markdown("posts", "k8s-auto")
+        mini = json.loads(fm["mini_json"])
+        self.assertEqual(mini["generated_by"], knowledge.AUTO_GENERATOR)
+        self.assertEqual(mini["items"][0]["id"], "k8s-auto-auto-1")
+        self.assertEqual(mini["items"][0]["category"], "kubernetes")
+        self.assertIn("查看节点", body)
+
+    def test_knowledge_config_persists_auto_scrape_and_csv_terms(self):
+        self._write_knowledge_config()
+        with TestClient(app) as client:
+            csrf = self._login(client)
+            with mock.patch("admin.main.build_state.trigger_build"):
+                r = client.post(
+                    "/admin/config/knowledge",
+                    data={
+                        "_csrf": csrf,
+                        "min_app_version": "0.2.1",
+                        "auto_scrape.enabled": "1",
+                        "auto_scrape.default_category": "kubernetes",
+                        "auto_scrape.include_languages": "bash, yaml",
+                        "auto_scrape.max_items_per_article": "4",
+                        "auto_scrape.max_examples": "2",
+                        "auto_scrape.max_code_chars": "5000",
+                        "auto_scrape.min_code_chars": "10",
+                        "categories[0][id]": "kubernetes",
+                        "categories[0][label]": "Kubernetes",
+                        "categories[0][intro]": "容器云",
+                        "categories[0][symbol]": "K",
+                        "categories[0][match_terms]": "kubernetes, kubectl, pod",
+                    },
+                    follow_redirects=False,
+                )
+            self.assertEqual(r.status_code, 303)
+        stored = store.load_yaml("knowledge")
+        self.assertEqual(stored["min_app_version"], "0.2.1")
+        self.assertEqual(stored["auto_scrape"]["include_languages"], ["bash", "yaml"])
+        self.assertEqual(stored["categories"][0]["match_terms"], ["kubernetes", "kubectl", "pod"])
+
+    def test_content_index_page_reports_search_and_knowledge_status(self):
+        (settings.output_root / "search").mkdir(parents=True)
+        (settings.output_root / "search" / "index.json").write_text(
+            '[{"title":"A","url":"/posts/a/","summary":"摘要"}]',
+            encoding="utf-8",
+        )
+        (settings.output_root / "index").mkdir()
+        (settings.output_root / "index" / "index.html").write_text(
+            "<html></html>", encoding="utf-8"
+        )
+        (settings.output_root / "knowledge").mkdir()
+        payload = {
+            "schemaVersion": 1,
+            "contentVersion": "v1",
+            "categories": [],
+            "items": [],
+            "generatedAt": "2026-10-23T12:00:00+08:00",
+        }
+        digest = knowledge.payload_digest(payload)
+        (settings.output_root / "knowledge" / "v1.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+        (settings.output_root / "knowledge" / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "contentVersion": "v1",
+                    "minAppVersion": "0.2.0",
+                    "generatedAt": payload["generatedAt"],
+                    "count": 0,
+                    "sha256": digest,
+                    "dataUrl": "/knowledge/v1.json",
+                }
+            ),
+            encoding="utf-8",
+        )
+        with TestClient(app) as client:
+            self._login(client)
+            r = client.get("/admin/content-index")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("校验通过", r.text)
+        self.assertIn("搜索记录", r.text)
+        self.assertIn("内容索引", r.text)
 
     def test_rewrite_preview_html_rewrites_assets(self):
         html = (

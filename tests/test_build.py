@@ -96,10 +96,36 @@ class TestBuild(unittest.TestCase):
             (out / "404.html").write_text("404", encoding="utf-8")
             (out / "search").mkdir()
             (out / "search" / "index.json").write_text("[broken", encoding="utf-8")
+            (out / "index").mkdir()
+            (out / "index" / "index.html").write_text("<html></html>", encoding="utf-8")
             (out / "sitemap.xml").write_text("<xml/>", encoding="utf-8")
             errors = verify_output(out)
-            self.assertTrue(any("合法 JSON" in e for e in errors))
+            self.assertTrue(any("校验失败" in e for e in errors))
             self.assertTrue(any("urlset" in e for e in errors))
+
+    def test_verify_output_rejects_duplicate_search_urls(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = pathlib.Path(d)
+            for rel, text in {
+                "index.html": "<html></html>",
+                "index.xml": "<rss></rss>",
+                "sitemap.xml": "<urlset><loc>/</loc></urlset>",
+                "robots.txt": "User-agent: *",
+                "llms.txt": "# site",
+                "404.html": "404",
+                "index/index.html": "<html></html>",
+            }.items():
+                target = out / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(text, encoding="utf-8")
+            (out / "search").mkdir()
+            (out / "search" / "index.json").write_text(
+                '[{"title":"A","url":"/posts/a/","summary":"x"},'
+                '{"title":"A again","url":"/posts/a/","summary":"y"}]',
+                encoding="utf-8",
+            )
+            errors = verify_output(out)
+            self.assertTrue(any("重复 URL" in e for e in errors))
 
     def test_verify_output_rejects_draft_and_future_leak(self):
         with tempfile.TemporaryDirectory() as d:

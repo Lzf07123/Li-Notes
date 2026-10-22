@@ -198,17 +198,36 @@ def verify_output(dst, expect_absolute_urls=False, content_root=None):
         "robots.txt",
         "llms.txt",
         "search/index.json",
+        "index/index.html",
         "404.html",
     )
     for rel in required:
         if not (dst / rel).exists():
             errors.append(f"产物缺失: {rel}")
+    public_index = dst / "index" / "index.html"
+    if public_index.exists() and "index-entry" not in public_index.read_text(
+        encoding="utf-8", errors="replace"
+    ):
+        errors.append("index/index.html 未渲染内容索引条目")
     search_index = dst / "search" / "index.json"
     if search_index.exists():
         try:
-            json.loads(search_index.read_text(encoding="utf-8"))
+            search_data = json.loads(search_index.read_text(encoding="utf-8"))
+            if not isinstance(search_data, list):
+                raise ValueError("根节点必须是数组")
+            urls = set()
+            for index, item in enumerate(search_data, 1):
+                if not isinstance(item, dict):
+                    raise ValueError(f"第 {index} 条不是对象")
+                for key in ("title", "url", "summary"):
+                    if not str(item.get(key) or "").strip():
+                        raise ValueError(f"第 {index} 条缺少 {key}")
+                url = str(item["url"])
+                if url in urls:
+                    raise ValueError(f"重复 URL: {url}")
+                urls.add(url)
         except (ValueError, UnicodeDecodeError) as exc:
-            errors.append(f"search/index.json 不是合法 JSON: {exc}")
+            errors.append(f"search/index.json 校验失败: {exc}")
     sitemap = dst / "sitemap.xml"
     if sitemap.exists():
         text = sitemap.read_text(encoding="utf-8", errors="replace")

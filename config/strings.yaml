@@ -5,6 +5,7 @@ nav:
   posts: 笔记
   search: 搜索
   archive: 归档
+  index: 索引
   menu: 更多
 
 home:
@@ -35,6 +36,15 @@ tags:
   title: 标签
   intro: 从主题切入，找到相关笔记与可以继续追查的线索。
   count_suffix: 个标签
+
+index:
+  eyebrow: 内容索引
+  intro: 按年份汇总完整笔记，并从高频主题进入相关文章。
+  topics_title: 主题入口
+  entries_title: 全部笔记
+  browse_notes: 浏览分页笔记
+  browse_archive: 查看归档
+  browse_tags: 浏览全部标签
 
 common:
   reading_time: 分钟阅读

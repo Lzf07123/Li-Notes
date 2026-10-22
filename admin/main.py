@@ -174,6 +174,13 @@ ADMIN_NAV = [
         ],
     },
     {
+        "label": "跨端",
+        "items": [
+            {"label": "内容索引", "path": "/content-index", "icon": "text"},
+            {"label": "小程序同步", "path": "/knowledge-sync", "icon": "book"},
+        ],
+    },
+    {
         "label": "系统",
         "items": [
             {"label": "媒体库", "path": "/media", "icon": "image"},
@@ -1019,6 +1026,180 @@ def build_status(request: Request):
     """后台构建进度轮询：POST 不阻塞，前端状态条轮询此接口。"""
     require_login(request)
     return JSONResponse(build_state.snapshot())
+
+
+def _content_index_status() -> dict:
+    path = settings.output_root / "search" / "index.json"
+    status = {
+        "path": path,
+        "exists": path.exists(),
+        "valid": False,
+        "count": 0,
+        "size": 0,
+        "mtime": "",
+        "error": "",
+    }
+    if not path.exists():
+        return status
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, list):
+            raise ValueError("索引根节点不是数组")
+        status.update(
+            {
+                "valid": True,
+                "count": len(data),
+                "size": path.stat().st_size,
+                "mtime": datetime.datetime.fromtimestamp(path.stat().st_mtime).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+            }
+        )
+    except (OSError, ValueError, UnicodeDecodeError) as exc:
+        status["error"] = str(exc)
+    return status
+
+
+def _knowledge_manifest_status() -> dict:
+    manifest_path = settings.output_root / "knowledge" / "manifest.json"
+    status = {
+        "exists": manifest_path.exists(),
+        "valid": False,
+        "count": 0,
+        "version": "",
+        "error": "",
+    }
+    if not manifest_path.exists():
+        return status
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        data_path = settings.output_root / str(manifest.get("dataUrl") or "").lstrip("/")
+        payload = json.loads(data_path.read_text(encoding="utf-8"))
+        if knowledge_store.payload_digest(payload) != manifest.get("sha256"):
+            raise ValueError("payload 哈希与 manifest 不一致")
+        status.update(
+            {
+                "valid": True,
+                "count": int(manifest.get("count") or 0),
+                "version": str(manifest.get("contentVersion") or ""),
+            }
+        )
+    except (OSError, ValueError, TypeError, UnicodeDecodeError) as exc:
+        status["error"] = str(exc)
+    return status
+
+
+@app.get(ap("/content-index"), response_class=HTMLResponse)
+def content_index_page(request: Request):
+    require_login(request)
+    posts = store.list_markdown("posts")
+    published = [item for item in posts if item.get("status") == "published"]
+    tags = store.all_tags()
+    status = _content_index_status()
+    knowledge_status = _knowledge_manifest_status()
+    public_entries = []
+    try:
+        raw_entries = json.loads((settings.output_root / "search" / "index.json").read_text(encoding="utf-8"))
+        if isinstance(raw_entries, list):
+            public_entries = raw_entries[:12]
+    except (OSError, ValueError, UnicodeDecodeError):
+        pass
+    return render(
+        request,
+        "content_index.html",
+        {
+            "status": status,
+            "public_entries": public_entries,
+            "post_count": len(published),
+            "tag_count": len(tags),
+            "knowledge_status": knowledge_status,
+            "latest_build": _build_info(),
+            "public_index_exists": (settings.output_root / "index" / "index.html").exists(),
+        },
+    )
+
+
+def _knowledge_sync_report() -> dict:
+    root = settings.content_root.parent
+    return knowledge_store.scan_articles(root)
+
+
+@app.get(ap("/knowledge-sync"), response_class=HTMLResponse)
+def knowledge_sync_page(request: Request):
+    require_login(request)
+    error = ""
+    report = None
+    try:
+        report = _knowledge_sync_report()
+    except (OSError, ValueError) as exc:
+        error = str(exc)
+    records = report["records"] if report else []
+    by_status = {
+        status: [record for record in records if record.get("status") == status]
+        for status in ("manual", "generated", "auto", "skipped")
+    }
+    return render(
+        request,
+        "knowledge_sync.html",
+        {
+            "report": report,
+            "records_by_status": by_status,
+            "sync_error": error,
+        },
+    )
+
+
+@app.post(ap("/knowledge-sync/persist"))
+async def knowledge_sync_persist(
+    request: Request,
+    csrf_token: str = Form("", alias="_csrf"),
+):
+    require_login(request)
+    if not csrf_ok(request, {"_csrf": csrf_token}):
+        return RedirectResponse(ap("/knowledge-sync?error=会话失效"), status_code=303)
+    form = await request.form()
+    action = str(form.get("action") or "")
+    selected = {str(value) for value in form.getlist("slugs")}
+    if action not in ("persist", "refresh", "clear"):
+        return RedirectResponse(ap("/knowledge-sync?error=未知操作"), status_code=303)
+    if not selected:
+        return RedirectResponse(ap("/knowledge-sync?error=请先选择文章"), status_code=303)
+    try:
+        report = _knowledge_sync_report()
+    except (OSError, ValueError) as exc:
+        return RedirectResponse(ap(f"/knowledge-sync?error={exc}"), status_code=303)
+    by_slug = {record["slug"]: record for record in report["records"]}
+    allowed_status = "auto" if action == "persist" else "generated"
+    changed = 0
+    try:
+        for slug in sorted(selected):
+            record = by_slug.get(slug)
+            if not record or record.get("status") != allowed_status:
+                continue
+            frontmatter, body = store.read_markdown("posts", slug)
+            if action == "clear":
+                if (
+                    knowledge_store.parse_mini_field(frontmatter.get("mini_json")).get("generated_by")
+                    != knowledge_store.AUTO_GENERATOR
+                ):
+                    continue
+                frontmatter.pop("mini_json", None)
+            else:
+                mini = record["mini"]
+                mini["generated_by"] = knowledge_store.AUTO_GENERATOR
+                frontmatter["mini_json"] = json.dumps(mini, ensure_ascii=False, indent=2)
+            store.write_markdown("posts", slug, frontmatter, body)
+            changed += 1
+    except (OSError, ValueError) as exc:
+        return RedirectResponse(ap(f"/knowledge-sync?error=保存失败：{exc}"), status_code=303)
+    if not changed:
+        return RedirectResponse(ap("/knowledge-sync?error=没有可处理的文章"), status_code=303)
+    message = {
+        "persist": f"已持久化 {changed} 篇文章",
+        "refresh": f"已刷新 {changed} 篇自动配置",
+        "clear": f"已清除 {changed} 篇自动配置",
+    }[action]
+    return after_build_redirect("/knowledge-sync", f"{message}，正在后台重建…")
 
 
 # ---------- 媒体库 ----------
@@ -2469,7 +2650,11 @@ CONFIG_PAGES = {
         "页面文案",
         [
             {"name": "nav", "label": "导航", "type": "yaml", "help": "每行一个 key: 值"},
-            {"name": "home", "label": "首页区块标题", "type": "yaml", "help": "每行一个 key: 值"},
+            {"name": "home", "label": "首页与档案摘要", "type": "yaml", "help": "每行一个 key: 值"},
+            {"name": "posts", "label": "笔记列表页", "type": "yaml", "help": "每行一个 key: 值"},
+            {"name": "archive", "label": "归档页", "type": "yaml", "help": "每行一个 key: 值"},
+            {"name": "tags", "label": "标签页", "type": "yaml", "help": "每行一个 key: 值"},
+            {"name": "index", "label": "内容索引页", "type": "yaml", "help": "每行一个 key: 值"},
             {"name": "common", "label": "通用标签", "type": "yaml", "help": "每行一个 key: 值"},
             {"name": "footer", "label": "页脚文案", "type": "yaml", "help": "每行一个 key: 值"},
         ],
@@ -2478,16 +2663,24 @@ CONFIG_PAGES = {
         "知识速查",
         [
             {"name": "min_app_version", "label": "小程序最低支持版本", "type": "text"},
+            {"name": "auto_scrape.enabled", "label": "自动刮削未手写 mini_json 的文章", "type": "checkbox", "help": "关闭后仅导出手写或已持久化的速查"},
+            {"name": "auto_scrape.default_category", "label": "兜底分类 ID（可留空）", "type": "text", "help": "留空时未能匹配关键词的文章会跳过"},
+            {"name": "auto_scrape.include_languages", "label": "参与刮削的代码语言", "type": "csv", "help": "逗号分隔，如 bash, shell, yaml"},
+            {"name": "auto_scrape.max_items_per_article", "label": "命令表每篇最多条目", "type": "number"},
+            {"name": "auto_scrape.max_examples", "label": "每篇无命令表时最多提取示例", "type": "number"},
+            {"name": "auto_scrape.max_code_chars", "label": "单个示例最大字符数", "type": "number"},
+            {"name": "auto_scrape.min_code_chars", "label": "代码块最小字符数", "type": "number"},
             {
                 "name": "categories",
                 "label": "速查分类",
                 "type": "list",
-                "help": "分类 id 必须稳定；label/intro/symbol 可直接热更新",
+                "help": "分类 id 必须稳定；关键词用于自动分类，逗号分隔",
                 "columns": [
                     {"key": "id", "label": "ID", "input": "text"},
                     {"key": "label", "label": "名称", "input": "text"},
                     {"key": "intro", "label": "简介", "input": "text"},
                     {"key": "symbol", "label": "符号", "input": "text"},
+                    {"key": "match_terms", "label": "匹配关键词", "input": "csv"},
                 ],
             },
         ],
@@ -2517,6 +2710,8 @@ def config_edit(request: Request, name: str):
         raise HTTPException(404)
     label, specs = CONFIG_PAGES[name]
     data = store.load_yaml(name)
+    if name == "knowledge":
+        data = knowledge_store.normalize_config(data)
     fields = []
     for spec in specs:
         key = spec["name"]
@@ -2530,7 +2725,16 @@ def config_edit(request: Request, name: str):
         elif ftype == "checkbox":
             field["value"] = bool(value)
         elif ftype == "list":
-            field["value"] = value if isinstance(value, list) else []
+            rows = []
+            for raw_row in value if isinstance(value, list) else []:
+                if not isinstance(raw_row, dict):
+                    continue
+                row = dict(raw_row)
+                for col in spec.get("columns", []):
+                    if col.get("input") == "csv" and isinstance(row.get(col["key"]), list):
+                        row[col["key"]] = ", ".join(str(x) for x in row[col["key"]])
+                rows.append(row)
+            field["value"] = rows
         elif ftype == "csv":
             field["value"] = ", ".join(value if isinstance(value, list) else [])
         elif ftype == "number":

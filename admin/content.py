@@ -1,7 +1,9 @@
 """内容读写层：Markdown/YAML 文件是唯一事实来源，路径一律防穿越。"""
 
+import os
 import re
 import shutil
+import tempfile
 import time
 from pathlib import Path
 import yaml
@@ -61,6 +63,40 @@ def safe_resolve(root: Path, rel: str) -> Path:
     if not p.is_relative_to(root_r):
         raise ValueError("path escape")
     return p
+
+
+def atomic_write_text(path: Path, text: str) -> None:
+    """原子写入后台可变内容，并在替换前后同步文件与目录元数据。
+
+    配置和 Markdown 是跨容器重建仍要保留的唯一事实源。临时文件与目标位于
+    同一目录，flush + fsync 后再 os.replace，避免进程中断留下半截文件。
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    previous_mode = path.stat().st_mode & 0o777 if path.exists() else None
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if previous_mode is not None:
+            os.chmod(tmp, previous_mode)
+        os.replace(tmp, path)
+        try:
+            dir_fd = os.open(path.parent, os.O_RDONLY)
+        except OSError:
+            dir_fd = None
+        if dir_fd is not None:
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+    finally:
+        try:
+            tmp.unlink()
+        except FileNotFoundError:
+            pass
 
 def _read_frontmatter(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
@@ -182,8 +218,7 @@ def write_markdown(section: str, slug: str, frontmatter: dict, body: str) -> Non
     fm = yaml.safe_dump(fm, allow_unicode=True, sort_keys=False, default_flow_style=False).strip()
     text = f"---\n{fm}\n---\n\n{body.strip()}\n"
     p = safe_resolve(settings.content_root, f"{section}/{slug}.md")
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(text, encoding="utf-8")
+    atomic_write_text(p, text)
 
 
 def delete_markdown(section: str, slug: str) -> None:
@@ -286,7 +321,7 @@ def remove_image_references(rel: str) -> list[str]:
         new_text = _strip_image_refs(text, url)
         new_text = _strip_frontmatter_refs(new_text, url)
         if new_text != text:
-            p.write_text(new_text, encoding="utf-8")
+            atomic_write_text(p, new_text)
             changed.append(p.relative_to(root).as_posix())
     return changed
 
@@ -349,7 +384,7 @@ def clear_config_image_refs(rel: str) -> list[str]:
         if not isinstance(data, dict) or not _clear_matching_strings(data, url):
             continue
         text = yaml.safe_dump(data, allow_unicode=True, sort_keys=False, default_flow_style=False)
-        p.write_text(f"# {p.stem}.yaml（后台保存生成）\n{text}", encoding="utf-8")
+        atomic_write_text(p, f"# {p.stem}.yaml（后台保存生成）\n{text}")
         changed.append(p.name)
     return changed
 
@@ -362,4 +397,4 @@ def load_yaml(name: str) -> dict:
 def save_yaml(name: str, data: dict) -> None:
     p = safe_resolve(settings.config_root, f"{name}.yaml")
     text = yaml.safe_dump(data, allow_unicode=True, sort_keys=False, default_flow_style=False)
-    p.write_text(f"# {name}.yaml（后台保存生成）\n{text}", encoding="utf-8")
+    atomic_write_text(p, f"# {name}.yaml（后台保存生成）\n{text}")

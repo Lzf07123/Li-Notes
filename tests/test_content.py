@@ -41,6 +41,13 @@ class TestContent(unittest.TestCase):
         content.save_yaml("brand", {"name": "Li&Notes", "icp": ""})
         self.assertEqual(content.load_yaml("brand")["name"], "Li&Notes")
 
+    def test_atomic_write_replaces_existing_file_without_leftover_temp(self):
+        target = self.root / "config" / "state.yaml"
+        content.atomic_write_text(target, "version: 1\n")
+        content.atomic_write_text(target, "version: 2\nvalue: persisted\n")
+        self.assertEqual(target.read_text(encoding="utf-8"), "version: 2\nvalue: persisted\n")
+        self.assertEqual(list(target.parent.glob(f".{target.name}.*.tmp")), [])
+
     def test_remove_image_references(self):
         post = self.root / "content" / "posts" / "hello.md"
         post.write_text(
