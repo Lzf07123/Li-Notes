@@ -54,8 +54,10 @@ def read_revision(section: str, slug: str, ts: str) -> tuple[dict, str]:
     target = (root / "revisions" / section / slug / f"{ts}.md").resolve()
     if not target.is_relative_to(root / "revisions"):
         raise ValueError("path escape")
+    from admin.content import split_frontmatter
+
     text = target.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
-    if len(parts) >= 3:
-        return (yaml.safe_load(parts[1]) or {}), parts[2].lstrip("\n")
+    fm_text, body = split_frontmatter(text)
+    if fm_text:
+        return (yaml.safe_load(fm_text) or {}), body.lstrip("\n")
     return {}, text

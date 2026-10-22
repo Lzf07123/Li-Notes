@@ -27,6 +27,7 @@ Li&Notes 是个人学习笔记站，负责完整 Markdown 笔记的写作、归�
 - Fuse.js 本地搜索，构建期生成索引。
 - 阅读进度、代码复制、目录、上一篇/下一篇与相关笔记。
 - 明暗主题跟随系统。
+- 文章可配置 `mini_json`，构建期导出小程序速查包与 `manifest.json`。
 - 访问统计只记录路径与时间，不收集访客个人信息。
 
 ## 本地运行
@@ -39,6 +40,38 @@ docker compose --profile admin up -d
 默认公开站端口 `80`；可在 `.env` 设置 `HTTP_PORT`。首次部署无需手动构建，admin 启动会自动执行全量构建；设置 `LINOTES_BOOTSTRAP_BUILD=0` 可关闭（旧变量 `LIBLOG_BOOTSTRAP_BUILD` 仍兼容）。
 
 部署前在 `.env` 设置 `SITE_BASEURL=https://你的域名/`；启用 HTTPS 后将 `COOKIE_SECURE=1`。
+
+## 小程序内容同步
+
+文章编辑器中的“小程序同步配置（JSON）”使用：
+
+```json
+{
+  "enabled": true,
+  "items": [
+    {
+      "id": "apt",
+      "category": "linux",
+      "title": "APT 包管理",
+      "command": "apt",
+      "summary": "Debian / Ubuntu 包管理入口",
+      "keywords": ["安装", "卸载"],
+      "tags": ["包管理", "Linux"],
+      "syntax": "apt [操作] [包名]",
+      "examples": [{"label": "更新索引", "code": "sudo apt update"}],
+      "notes": ["执行前先更新索引"],
+      "related": ["apt-get"]
+    }
+  ]
+}
+```
+
+`--full` 构建会在 `output/knowledge/` 生成：
+
+- `manifest.json`
+- `<contentVersion>.json`
+
+小程序只消费该结构化数据，不镜像文章正文。分类名称在后台“知识速查”中维护。
 
 ## 验证（推荐 Docker）
 
@@ -77,7 +110,8 @@ tests/                    # 单元与回归测试
 | 作者姓名与链接 | `config/profile.yaml` |
 | 导航、页面文案、空状态 | `config/strings.yaml` |
 | 颜色、阴影、动效 | `themes/blog-theme/static/css/tokens.css` |
-| 文章内容 | `content/posts/*.md` |
+| 文章与小程序速查配置 | `content/posts/*.md` |
+| 小程序分类与最低版本 | `config/knowledge.yaml` |
 
 ## 备案与安全
 

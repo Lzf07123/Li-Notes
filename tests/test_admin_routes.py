@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import re
 import tempfile
@@ -371,6 +372,72 @@ class AdminRoutesTest(unittest.TestCase):
             self.assertNotIn(">项目<", r.text)
             self.assertNotIn(">时间线<", r.text)
             self.assertNotIn("友情链接", r.text)
+
+    def test_post_edit_renders_mini_json_editor(self):
+        store.write_markdown(
+            "posts",
+            "note",
+            {
+                "title": "N",
+                "date": "2026-10-23",
+                "status": "published",
+                "mini_json": '{"enabled": false}',
+            },
+            "正文",
+        )
+        with TestClient(app) as client:
+            self._login(client)
+            r = client.get("/admin/posts/note/edit")
+            self.assertEqual(r.status_code, 200)
+            self.assertIn('name="mini_config"', r.text)
+            self.assertIn("小程序同步配置", r.text)
+
+    def test_post_save_validates_mini_sync_config(self):
+        original = build.run_full
+        build.run_full = lambda: (types.SimpleNamespace(returncode=0, stderr=""), 0.01)
+        self.addCleanup(setattr, build, "run_full", original)
+        base = {
+            "_csrf": "",
+            "slug": "",
+            "new_slug": "synced-note",
+            "action": "save_stay",
+            "title": "同步笔记",
+            "date": "2026-10-23",
+            "status": "published",
+            "tags": "Linux, 速查",
+            "summary": "摘要",
+            "cover": "",
+            "body": "正文",
+        }
+        with TestClient(app) as client:
+            csrf = self._login(client)
+            base["_csrf"] = csrf
+            invalid = dict(base, mini_config='{"enabled": true, "items": []}')
+            r = client.post("/admin/posts/save", data=invalid, follow_redirects=False)
+            self.assertEqual(r.status_code, 303)
+            self.assertFalse((settings.content_root / "posts" / "synced-note.md").exists())
+
+            mini = {
+                "enabled": True,
+                "items": [{
+                    "id": "sync-test",
+                    "category": "linux",
+                    "title": "同步测试",
+                    "command": "echo ok",
+                    "summary": "测试",
+                    "syntax": "echo ok",
+                    "examples": [{"label": "运行", "code": "echo ok"}],
+                    "notes": [],
+                    "related": [],
+                    "keywords": ["同步"],
+                    "tags": ["速查"],
+                }],
+            }
+            valid = dict(base, mini_config=json.dumps(mini, ensure_ascii=False))
+            r = client.post("/admin/posts/save", data=valid, follow_redirects=False)
+            self.assertEqual(r.status_code, 303)
+        fm, _ = store.read_markdown("posts", "synced-note")
+        self.assertEqual(json.loads(fm["mini_json"])["items"][0]["id"], "sync-test")
 
     def test_trash_restore_cycle(self):
         store.write_markdown(

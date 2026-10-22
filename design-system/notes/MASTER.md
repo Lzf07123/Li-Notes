@@ -36,6 +36,7 @@ tests/                  # 单元与回归
 | 内容 | 文章、标签、回收站 |
 | 设置 | 品牌、文案、作者资料、账号 |
 | 系统 | 媒体库、统计、操作日志、健康检查、内容体检、备份 |
+| 跨端 | 文章 `mini_json`、`config/knowledge.yaml`、knowledge manifest |
 
 后台只认识 `posts` 栏目；未知 section 返回 404。
 
@@ -54,7 +55,9 @@ pinned: false
 - `status: draft` 必须同步 Hugo `draft: true`。
 - 文章文件写入 `content/posts/<slug>.md`。
 - 站内链接只允许 `/posts/<slug>/`、`/img/...`、`/assets/...`。
-- 小程序速查数据不是文章正文的副本，后续从独立结构化源导出。
+- 小程序速查数据来自文章 `mini_json`，只导出结构化条目，不复制正文。
+- `--full` 构建输出 `output/knowledge/manifest.json` 和带版本 JSON。
+- manifest Hash 只签名业务内容，`generatedAt` 不得造成同版本 Hash 漂移。
 
 ## 5. 构建与验证
 

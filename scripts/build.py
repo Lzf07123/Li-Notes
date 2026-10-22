@@ -18,6 +18,11 @@ import sys
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from admin import knowledge
+from admin.content import split_frontmatter
 
 FINGERPRINT_FILES = {
     "css.tokens": "themes/blog-theme/static/css/tokens.css",
@@ -72,9 +77,10 @@ def validate_content(root):
     errors = []
     for p in sorted((root / "content").rglob("*.md")):
         text = p.read_text(encoding="utf-8")
-        if text.startswith("---"):
+        fm_text, _ = split_frontmatter(text)
+        if fm_text:
             try:
-                yaml.safe_load(text.split("---", 2)[1])
+                yaml.safe_load(fm_text)
             except Exception as exc:  # noqa: BLE001 - 统一收集为可读错误
                 errors.append(f"{p.relative_to(root)}: frontmatter 解析失败: {exc}")
     return errors
@@ -225,10 +231,11 @@ def verify_output(dst, expect_absolute_urls=False, content_root=None):
             sitemap_text = sitemap.read_text(encoding="utf-8", errors="replace")
         for p in sorted((content_root / "posts").glob("*.md")):
             text = p.read_text(encoding="utf-8")
-            if not text.startswith("---"):
+            fm_text, _ = split_frontmatter(text)
+            if not fm_text:
                 continue
             try:
-                fm = _yaml.safe_load(text.split("---", 2)[1]) or {}
+                fm = _yaml.safe_load(fm_text) or {}
             except Exception:
                 continue
             rel = f"posts/{p.stem}/index.html"
@@ -316,6 +323,13 @@ def build(args):
             metrics=args.metrics,
         )
         publish(tmp, dst)
+        knowledge_manifest = None
+        if not args.preview:
+            knowledge_manifest = knowledge.export_bundle(
+                ROOT,
+                dst,
+                base_url=os.environ.get("SITE_BASEURL", "").strip(),
+            )
         verify_errors = verify_output(
             dst,
             expect_absolute_urls=bool(os.environ.get("SITE_BASEURL", "").strip()),
@@ -336,6 +350,7 @@ def build(args):
                 "bytes": total,
                 "elapsed_s": elapsed,
                 "preview": bool(args.preview),
+                "knowledge": knowledge_manifest,
             }
             pathlib.Path(args.report).write_text(
                 json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

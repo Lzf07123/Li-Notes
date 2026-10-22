@@ -1,0 +1,16 @@
+# 微信小程序速查导出配置（后台“知识速查”可编辑）
+schema_version: 1
+min_app_version: "0.2.0"
+categories:
+- id: linux
+  label: Linux
+  intro: 包管理与常用命令
+  symbol: L
+- id: kubernetes
+  label: Kubernetes
+  intro: 工作负载、网络与排错
+  symbol: K
+- id: markdown
+  label: Markdown
+  intro: 常用写法与扩展语法
+  symbol: M

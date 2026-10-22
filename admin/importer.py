@@ -19,13 +19,13 @@ SKIP_STEMS = {"_index", "index"}
 
 def parse_document(filename: str, text: str) -> tuple[str, dict, str]:
     """解析单个 Markdown 文档，返回 (slug, frontmatter, body)。"""
-    parts = text.split("---", 2)
-    if len(parts) >= 3 and not parts[0].strip():
+    fm_text, body = content.split_frontmatter(text)
+    if fm_text:
         try:
-            fm = yaml.safe_load(parts[1]) or {}
+            fm = yaml.safe_load(fm_text) or {}
         except yaml.YAMLError as exc:
             raise ValueError(f"{filename}: frontmatter 解析失败") from exc
-        body = parts[2].lstrip("\n")
+        body = body.lstrip("\n")
     else:
         fm, body = {}, text
     if not isinstance(fm, dict):

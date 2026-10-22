@@ -28,6 +28,10 @@ IMAGE_REF_PATTERNS = (
 _DANGEROUS_SVG_RE = re.compile(
     r"(<script|javascript:|data:\s*text/html|on[a-z]+\s*=)", re.IGNORECASE
 )
+_FRONTMATTER_RE = re.compile(
+    r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)",
+    re.DOTALL,
+)
 
 
 def sanitize_inline_svg(value: str) -> str:
@@ -43,6 +47,14 @@ def sanitize_inline_svg(value: str) -> str:
     return cleaned
 
 
+def split_frontmatter(text: str) -> tuple[str, str]:
+    """按独立 --- 行切分 frontmatter，忽略代码/字符串中出现的 ---。"""
+    match = _FRONTMATTER_RE.match(text)
+    if not match:
+        return "", text
+    return match.group(1), text[match.end():]
+
+
 def safe_resolve(root: Path, rel: str) -> Path:
     root_r = root.resolve()
     p = (root_r / rel).resolve()
@@ -52,13 +64,12 @@ def safe_resolve(root: Path, rel: str) -> Path:
 
 def _read_frontmatter(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
-    if text.startswith("---"):
-        parts = text.split("---", 2)
-        if len(parts) >= 3:
-            try:
-                return yaml.safe_load(parts[1]) or {}
-            except yaml.YAMLError:
-                return {}
+    fm_text, _ = split_frontmatter(text)
+    if fm_text:
+        try:
+            return yaml.safe_load(fm_text) or {}
+        except yaml.YAMLError:
+            return {}
     return {}
 
 
@@ -145,10 +156,10 @@ def read_markdown(section: str, slug: str) -> tuple[dict, str]:
         raise ValueError("bad slug")
     p = safe_resolve(settings.content_root, f"{section}/{slug}.md")
     text = p.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
-    if len(parts) >= 3:
+    fm_text, body = split_frontmatter(text)
+    if fm_text:
         try:
-            return yaml.safe_load(parts[1]) or {}, parts[2].lstrip("\n")
+            return yaml.safe_load(fm_text) or {}, body.lstrip("\n")
         except yaml.YAMLError:
             return {}, text
     return {}, text
@@ -282,11 +293,11 @@ def remove_image_references(rel: str) -> list[str]:
 
 def _strip_frontmatter_refs(text: str, url: str) -> str:
     """清空 Markdown frontmatter 中等于目标图片地址的字段（如 cover）。"""
-    parts = text.split("---", 2)
-    if len(parts) < 3 or parts[0].strip():
+    fm_text, body = split_frontmatter(text)
+    if not fm_text:
         return text
     try:
-        fm = yaml.safe_load(parts[1]) or {}
+        fm = yaml.safe_load(fm_text) or {}
     except yaml.YAMLError:
         return text
     if not isinstance(fm, dict) or not _clear_matching_strings(fm, url):
@@ -294,7 +305,7 @@ def _strip_frontmatter_refs(text: str, url: str) -> str:
     new_fm = yaml.safe_dump(
         fm, allow_unicode=True, sort_keys=False, default_flow_style=False
     ).strip()
-    return f"---\n{new_fm}\n---{parts[2]}"
+    return f"---\n{new_fm}\n---{body}"
 
 
 def _strip_image_refs(text: str, url: str) -> str:

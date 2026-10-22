@@ -38,7 +38,10 @@
           {% elif ftype == "checkbox" %}
             <input type="checkbox" name="{{ name }}" value="1" {% if value %}checked{% endif %}>
           {% elif ftype == "textarea" %}
-            <textarea name="{{ name }}" rows="3">{{ value }}</textarea>
+            <textarea name="{{ name }}" rows="{{ 14 if name == 'mini_config' else 3 }}" class="{{ 'mono' if name == 'mini_config' else '' }}">{{ value }}</textarea>
+            {% if name == "mini_config" %}
+            <small class="field-help">JSON 格式。enabled 为 true 时会由构建导出到小程序；保存时会校验分类、标签、示例和引用关系。</small>
+            {% endif %}
           {% else %}
             <input type="text" name="{{ name }}" value="{{ value }}"{% if name == "tags" %} list="tag-options"{% endif %}>
           {% endif %}

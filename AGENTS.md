@@ -34,7 +34,8 @@ Li&Notes 只负责完整文章域：首页、文章列表、详情、标签、�
 8. **构建约束**：Hugo 固定 v0.165.0（`bin/hugo/`，SHA256 校验）；构建必须走校验 → `GOMEMLIMIT` 限内存渲染 → 逐文件原子发布 → 清理；部署域名由 `SITE_BASEURL` 注入；渲染器只用 Hugo。
 9. **后台安全**：PBKDF2-HMAC-SHA256 600k；服务端会话、CSRF、登录限速；OIDC 遵循 PKCE/state/nonce/验签/防重放；上传白名单与大小限制；预览走 Hugo。
 10. **依赖与运行期**：apt/pip 使用镜像变量；Hugo 不联网下载；Fuse.js 等前端库必须本地化；`content/ config/ output/` 使用 bind 挂载，`data/ media/` 使用命名卷。
-11. **跨端数据**：小程序只消费结构化速查数据与版本清单，不镜像文章正文或执行远程代码；契约见共存方案。
+11. **跨端数据**：小程序只消费文章 `mini_json` 导出的结构化速查数据与版本清单，不镜像文章正文或执行远程代码；分类/最低版本存 `config/knowledge.yaml`，构建后必须生成 `output/knowledge/manifest.json` 与版本 JSON。
+12. **验证环境**：调试和构建优先使用 Docker；不得为日常验证在宿主机安装 Hugo、Python 依赖或前端工具链，任务结束清理临时容器/卷/文件。
 
 ## 协作规范
 

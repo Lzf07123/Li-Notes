@@ -1,6 +1,7 @@
 """Li&Notes 管理后台主应用：Setup、双登录、文章管理、预览与重建。"""
 
 import datetime
+import json
 import os
 import re
 from contextlib import asynccontextmanager
@@ -29,6 +30,7 @@ from admin import (
     content as store,
     forms,
     importer,
+    knowledge as knowledge_store,
     media as media_store,
     oidc,
     restore as restore_store,
@@ -167,6 +169,7 @@ ADMIN_NAV = [
             {"label": "品牌", "path": "/config/brand", "icon": "palette"},
             {"label": "文案", "path": "/config/strings", "icon": "text"},
             {"label": "作者资料", "path": "/config/profile", "icon": "card"},
+            {"label": "知识速查", "path": "/config/knowledge", "icon": "book"},
             {"label": "账号", "path": "/settings/account", "icon": "user"},
         ],
     },
@@ -1816,6 +1819,12 @@ SECTIONS = {
 
 
 def _edit_fields(section: str, fm: dict) -> list:
+    mini_raw = fm.get("mini_json") or "{}"
+    try:
+        mini = knowledge_store.parse_mini_field(mini_raw)
+        mini_json = json.dumps(mini, ensure_ascii=False, indent=2) if mini else ""
+    except ValueError:
+        mini_json = str(mini_raw)
     return [
         ("title", "标题", "text", fm.get("title", "")),
         ("date", "日期", "text", fm.get("date", datetime.date.today().isoformat())),
@@ -1824,6 +1833,7 @@ def _edit_fields(section: str, fm: dict) -> list:
         ("summary", "摘要", "textarea", fm.get("summary", "")),
         ("cover", "封面图路径（/img/…，选填）", "text", fm.get("cover", "")),
         ("pinned", "置顶文章", "checkbox", bool(fm.get("pinned", False))),
+        ("mini_config", "小程序同步配置（JSON；enabled 为 true 时导出）", "textarea", mini_json),
     ]
 
 
@@ -2230,6 +2240,7 @@ def section_save(
     summary: str = Form(""),
     cover: str = Form(""),
     pinned: str = Form(""),
+    mini_config: str = Form(""),
     body: str = Form(""),
 ):
     require_login(request)
@@ -2251,17 +2262,28 @@ def section_save(
             except FileNotFoundError:
                 old = {}
         fm = dict(old)
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()]
         fm.update(
             {
                 "title": title,
                 "date": date,
                 "status": status,
-                "tags": [t.strip() for t in tags.split(",") if t.strip()],
+                "tags": tag_list,
                 "summary": summary,
                 "cover": cover,
                 "pinned": pinned == "1",
             }
         )
+        try:
+            mini_raw = json.loads(mini_config) if mini_config.strip() else {}
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"小程序同步配置 JSON 格式错误：{exc}") from exc
+        mini_norm = knowledge_store.validate_mini_config(mini_raw, slug, tag_list)
+        if mini_norm.get("enabled"):
+            fm["mini_json"] = json.dumps(mini_norm, ensure_ascii=False, indent=2)
+        else:
+            fm.pop("mini_json", None)
+            fm.pop("mini", None)
         store.write_markdown(section, slug, fm, body)
         revisions.save_revision(section, slug, fm, body)
         _audit("content_save", f"{section}/{slug}")
@@ -2445,6 +2467,24 @@ CONFIG_PAGES = {
             {"name": "footer", "label": "页脚文案", "type": "yaml", "help": "每行一个 key: 值"},
         ],
     ),
+    "knowledge": (
+        "知识速查",
+        [
+            {"name": "min_app_version", "label": "小程序最低支持版本", "type": "text"},
+            {
+                "name": "categories",
+                "label": "速查分类",
+                "type": "list",
+                "help": "分类 id 必须稳定；label/intro/symbol 可直接热更新",
+                "columns": [
+                    {"key": "id", "label": "ID", "input": "text"},
+                    {"key": "label", "label": "名称", "input": "text"},
+                    {"key": "intro", "label": "简介", "input": "text"},
+                    {"key": "symbol", "label": "符号", "input": "text"},
+                ],
+            },
+        ],
+    ),
     "profile": (
         "作者资料",
         [
@@ -2508,6 +2548,14 @@ async def config_save(request: Request, name: str, csrf_token: str = Form("", al
     if name == "brand":
         data["icp_icon"] = store.sanitize_inline_svg(data.get("icp_icon", ""))
         data["police_icon"] = store.sanitize_inline_svg(data.get("police_icon", ""))
+    if name == "knowledge":
+        try:
+            data = knowledge_store.normalize_config(data)
+        except ValueError as exc:
+            return RedirectResponse(
+                ap(f"/config/knowledge?error={exc}"),
+                status_code=303,
+            )
     try:
         store.save_yaml(name, data)
     except OSError as exc:

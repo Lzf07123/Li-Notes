@@ -7,6 +7,7 @@ from pathlib import Path
 import yaml
 
 from admin.config import ROOT
+from admin.content import split_frontmatter
 
 
 def audit_content(root=None) -> list[dict]:
@@ -25,22 +26,21 @@ def audit_content(root=None) -> list[dict]:
         text = p.read_text(encoding="utf-8")
         fm: dict = {}
         body = text
-        if text.startswith("---"):
-            parts = text.split("---", 2)
-            if len(parts) >= 3:
-                try:
-                    fm = yaml.safe_load(parts[1]) or {}
-                    body = parts[2]
-                except yaml.YAMLError:
-                    issues.append(
-                        {
-                            "severity": "danger",
-                            "section": section,
-                            "slug": p.stem,
-                            "title": p.stem,
-                            "message": "frontmatter 解析失败",
-                        }
-                    )
+        fm_text, parsed_body = split_frontmatter(text)
+        if fm_text:
+            try:
+                fm = yaml.safe_load(fm_text) or {}
+                body = parsed_body
+            except yaml.YAMLError:
+                issues.append(
+                    {
+                        "severity": "danger",
+                        "section": section,
+                        "slug": p.stem,
+                        "title": p.stem,
+                        "message": "frontmatter 解析失败",
+                    }
+                )
         pages.append(
             {
                 "path": p,
