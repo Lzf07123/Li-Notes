@@ -47,6 +47,8 @@ docker compose --profile admin up -d
 
 ## 小程序内容同步
 
+> 文章与 `mini_json` 已纳入 Git。发布后请提交并推送，确保远端构建包含最新文章。
+
 文章编辑器中的“小程序同步配置（JSON）”使用：
 
 ```json

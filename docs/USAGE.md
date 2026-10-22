@@ -45,7 +45,7 @@ docker compose up -d
 content/posts/<slug>.md
 ```
 
-> 当前仓库按既有规则忽略 `content/posts/*`。文章与 `mini_json` 依赖后台备份或本地工作区保存，不使用 Git 跟踪。
+> 文章与 `mini_json` 已纳入 Git。完成编辑后应提交并推送，确保远端部署包含最新内容。
 
 ## 3. 配置小程序同步
 
