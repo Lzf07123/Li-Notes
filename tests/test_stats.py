@@ -32,7 +32,7 @@ class StatsRoutesTest(unittest.TestCase):
         )
         init_db()
         conn = connect()
-        create_admin(conn, "admin", security.hash_password("Li&Blog@2026"))
+        create_admin(conn, "admin", security.hash_password("Li&Notes@2026"))
         conn.executemany(
             "INSERT INTO stats (path, day, views) VALUES (?, ?, ?)",
             [
@@ -52,7 +52,7 @@ class StatsRoutesTest(unittest.TestCase):
         csrf0 = re.search(r'name="_csrf" value="([^"]+)"', r.text).group(1)
         client.post(
             "/admin/login",
-            data={"username": "admin", "password": "Li&Blog@2026", "_csrf": csrf0},
+            data={"username": "admin", "password": "Li&Notes@2026", "_csrf": csrf0},
             follow_redirects=False,
         )
         r = client.get("/admin/stats")

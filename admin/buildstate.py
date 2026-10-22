@@ -62,7 +62,7 @@ def trigger_build(source: str = "") -> bool:
             pending=False,
             source=source,
         )
-        _worker = threading.Thread(target=_run_loop, name="blog-build", daemon=True)
+        _worker = threading.Thread(target=_run_loop, name="notes-build", daemon=True)
         _worker.start()
         return True
 

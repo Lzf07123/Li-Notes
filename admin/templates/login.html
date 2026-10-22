@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/{{ admin_path }}/static/css/admin.css?v={{ asset_version.admin }}">
   <script>
     (function () {
-      var saved = localStorage.getItem("liblog-admin-theme");
+      var saved = localStorage.getItem("linotes-admin-theme");
       if (saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
         document.documentElement.classList.add("dark");
       }
@@ -65,7 +65,7 @@
         btn.addEventListener("click", function () {
           var root = document.documentElement;
           var dark = root.classList.toggle("dark");
-          localStorage.setItem("liblog-admin-theme", dark ? "dark" : "light");
+          localStorage.setItem("linotes-admin-theme", dark ? "dark" : "light");
           btn.setAttribute("aria-pressed", dark ? "true" : "false");
         });
       }

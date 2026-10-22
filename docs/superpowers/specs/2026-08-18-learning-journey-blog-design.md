@@ -1,5 +1,7 @@
 # Li&Blog 学习历程博客 · 设计文档
 
+> **历史文档：** 本文是 Li&Blog 时期的设计记录。Li&Notes 当前事实以 `design-system/notes/BRAND.md`、`MASTER.md` 和 `2026-10-23-notes-knowledge-coexistence.md` 为准。
+
 > 日期：2026-08-18 ｜ 版本：v1.0 ｜ 状态：设计定稿，待用户评审
 > 配套文件：`design-system/blog/BRAND.md`（品牌意图）、`design-system/blog/MASTER.md`（实现速览）
 

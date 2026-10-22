@@ -1,16 +1,12 @@
 {% extends "base.html" %}
-{% block title %}{{ label }} · Li&Blog 后台{% endblock %}
+{% block title %}{{ label }} · Li&Notes 后台{% endblock %}
 {% block content %}
 <nav class="admin-breadcrumb" aria-label="面包屑">
   <a href="/{{ admin_path }}/">仪表盘</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
-  {% if section in ["posts", "projects", "timeline", "friends"] %}
-  <a href="/{{ admin_path }}/{{ section }}">{{ label }}</a>
+  <a href="/{{ admin_path }}/posts">{{ label }}</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <span aria-current="page">{{ slug or "新建" }}</span>
-  {% else %}
-  <span aria-current="page">{{ label }}</span>
-  {% endif %}
 </nav>
 <h1>{{ label }}{% if slug %}: {{ slug }}{% endif %}</h1>
 {% if error %}<p class="flash flash--error" role="alert">{{ error }}</p>{% endif %}
@@ -24,7 +20,7 @@
     <form id="edit-form" method="post" action="/{{ admin_path }}/{{ section }}/save">
       <input type="hidden" name="_csrf" value="{{ csrf }}">
       <input type="hidden" name="slug" value="{{ slug }}">
-      {% if not slug and section in ["posts", "projects", "timeline", "friends"] %}
+      {% if not slug %}
       <label>标识（slug，新建时必填，小写字母数字与连字符）
         <input type="text" name="new_slug" required pattern="[a-z0-9][a-z0-9-]{0,63}">
       </label>
@@ -44,20 +40,20 @@
           {% elif ftype == "textarea" %}
             <textarea name="{{ name }}" rows="3">{{ value }}</textarea>
           {% else %}
-            <input type="text" name="{{ name }}" value="{{ value }}"{% if name == "tags" and section == "posts" %} list="tag-options"{% endif %}>
+            <input type="text" name="{{ name }}" value="{{ value }}"{% if name == "tags" %} list="tag-options"{% endif %}>
           {% endif %}
         </label>
-        {% if name == "cover" and section == "posts" %}
+        {% if name == "cover" %}
         <button type="button" class="btn btn-sm btn-secondary" id="cover-pick">从媒体库选择封面</button>
         {% endif %}
       {% endfor %}
       <small id="title-hint" class="field-help" role="status" hidden></small>
-      {% if section == "posts" and all_tags %}
+      {% if all_tags %}
       <datalist id="tag-options">
         {% for t in all_tags %}<option value="{{ t }}"></option>{% endfor %}
       </datalist>
       {% endif %}
-      <div{% if section == "friends" %} hidden{% endif %}>
+      <div>
       <label>正文 Markdown
         <div class="editor-toolbar">
           <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="bold" title="加粗">B</button>
@@ -186,7 +182,7 @@
     var count = document.getElementById("body-count");
     var dialog = document.getElementById("image-dialog");
     var CSRF = "{{ csrf }}";
-    var DRAFT_KEY = "liblog-draft:" + "{{ section }}" + ":" + ("{{ slug }}" || "__new__");
+    var DRAFT_KEY = "linotes-draft:" + "{{ section }}" + ":" + ("{{ slug }}" || "__new__");
     var slugInput = form.querySelector('input[name="new_slug"]');
     var titleInput = form.querySelector('input[name="title"]');
     var slugAuto = false;

@@ -25,7 +25,7 @@ class TestBackup(unittest.TestCase):
             "---\ntitle: A\n---\n", encoding="utf-8"
         )
         (settings.config_root / "brand.yaml").write_text(
-            "name: Li&Blog\n", encoding="utf-8"
+            "name: Li&Notes\n", encoding="utf-8"
         )
         (media.MEDIA_ROOT / "x.png").write_bytes(b"png")
         conn = sqlite3.connect(settings.db_path)

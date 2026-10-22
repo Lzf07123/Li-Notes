@@ -1,4 +1,4 @@
-"""媒体库：上传 / 列出 / 删除主题静态图片（themes/blog-theme/static/img/）。
+"""媒体库：上传 / 列出 / 删除主题静态图片（themes/blog-theme/static/img/，兼容路径）。
 
 主流光栅格式（png/jpg/jpeg/gif/webp/avif）均可上传；尺寸或体积超过阈值时
 自动缩放到合适范围并优化编码。

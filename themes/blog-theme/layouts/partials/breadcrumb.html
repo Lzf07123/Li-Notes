@@ -2,7 +2,6 @@
 {{ $crumb_title := .Title }}
 {{ $section_title := "" }}
 {{ with .CurrentSection }}{{ $section_title = .Title }}{{ end }}
-{{ if eq .Section "friends" }}{{ $crumb_title = $strings.friends.title }}{{ $section_title = $strings.friends.title }}{{ end }}
 <nav class="breadcrumb" aria-label="{{ $strings.common.breadcrumb }}">
   <a href="{{ .Site.Home.RelPermalink }}">{{ $strings.nav.home }}</a>
   {{ with .CurrentSection }}

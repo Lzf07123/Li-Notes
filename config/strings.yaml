@@ -1,34 +1,20 @@
 # 站点级文案唯一出处：导航 / 区块标题 / 通用标签
-# 规则：模板禁止硬编码任何可见文案，全部从这里读取（后台"页面文案"栏目可改）
+# 规则：模板禁止硬编码任何可见文案，全部从这里读取（后台“页面文案”栏目可改）
 nav:
   home: 首页
-  posts: 文章
-  projects: 项目
-  timeline: 历程
-  about: 关于
-  resources: 资源
+  posts: 笔记
   search: 搜索
   archive: 归档
   menu: 更多
-  friends: 友情链接
 
 home:
-  hero_title: 你好，我是
-  goal_title: 当前目标
-  read_blog: 阅读博客
-  about_me: 关于我
-  journey_title: 学习历程
-  skills_title: 技能栈
-  projects_title: 项目集
-  latest_title: 最新文章
-  view_full: 查看完整历程
-  view_all: 查看全部
+  latest_title: 最新笔记
   result_count: 条结果
   no_results: 没有找到匹配内容，换个关键词试试
-  browse_posts: 浏览全部文章
+  browse_posts: 浏览全部笔记
   search_hint: 按标题、摘要与标签本地搜索，不上传任何内容
   search_placeholder: 输入关键词…
-  related_title: 相关文章
+  related_title: 相关笔记
 
 common:
   reading_time: 分钟阅读
@@ -50,39 +36,22 @@ common:
   tag: 标签
   pinned: 置顶
   repo: 仓库
-  no_related: 暂无相关文章
+  no_related: 暂无相关笔记
   links_title: 更多链接
   license_prefix: 本文采用
   toc: 目录
-  post_nav: 文章导航
-  timeline_nav: 时间线导航
+  post_nav: 笔记导航
   breadcrumb: 面包屑
   pagination: 分页
   pagination_page: 第 %d 页
-  no_tags: 还没有标签，发布文章后自动生成
+  no_tags: 还没有标签，发布笔记后自动生成
   copy_code: 复制
   copy_code_done: 已复制
-  empty_posts: 还没有文章，稍后再来看看
-  empty_projects: 项目正在打磨中，敬请期待
-  empty_timeline: 还没有里程碑，新的旅程即将开始
-  empty_archive: 还没有归档文章
-  empty_links: 暂时还没有友情链接，稍后再来看看
+  empty_posts: 还没有笔记，稍后再来看看
+  empty_archive: 还没有归档笔记
   browse_home: 返回首页
   search_loading: 正在加载搜索索引…
   search_error: 搜索索引加载失败，请稍后重试
-
-friends:
-  title: 友情链接
-  intro: 收录常去的站点与朋友们的博客，内容由对方站点维护。
-  empty: 暂时还没有友情链接，稍后再来看看吧。
-  visit: 查看站点
-  back: 返回友情链接
-  safety_title: 即将离开本站
-  safety_lead: 你正在访问一个站外链接，请注意甄别信息并保护个人信息。
-  safety_target: 目标站点
-  safety_continue: 继续访问
-  safety_cancel: 取消返回
-  safety_tip: 本站无法控制外部站点的内容、安全性与隐私政策，请勿在陌生站点输入账号密码等敏感信息。
 
 footer:
   rights: 保留所有权利

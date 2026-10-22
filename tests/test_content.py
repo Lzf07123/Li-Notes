@@ -38,8 +38,8 @@ class TestContent(unittest.TestCase):
             content.write_markdown("posts", "../evil", {"title": "x"}, "y")
 
     def test_yaml_save_load(self):
-        content.save_yaml("brand", {"name": "Li&Blog", "icp": ""})
-        self.assertEqual(content.load_yaml("brand")["name"], "Li&Blog")
+        content.save_yaml("brand", {"name": "Li&Notes", "icp": ""})
+        self.assertEqual(content.load_yaml("brand")["name"], "Li&Notes")
 
     def test_remove_image_references(self):
         post = self.root / "content" / "posts" / "hello.md"
@@ -78,11 +78,11 @@ class TestContent(unittest.TestCase):
 
     def test_clear_config_image_refs(self):
         (self.root / "config" / "brand.yaml").write_text(
-            "name: Li&Blog\n"
+            "name: Li&Notes\n"
             "logo: /img/2026/08/a.png\n"
             "favicon: /img/2026/08/a.png\n"
             "icp_icon: /img/2026/08/b.png\n"
-            "theme_key: liblog-theme\n",
+            "theme_key: linotes-theme\n",
             encoding="utf-8",
         )
         changed = content.clear_config_image_refs("2026/08/a.png")
@@ -91,7 +91,7 @@ class TestContent(unittest.TestCase):
         self.assertEqual(data["logo"], "")
         self.assertEqual(data["favicon"], "")
         self.assertEqual(data["icp_icon"], "/img/2026/08/b.png")
-        self.assertEqual(data["theme_key"], "liblog-theme")
+        self.assertEqual(data["theme_key"], "linotes-theme")
 
     def test_list_markdown_filter(self):
         content.write_markdown(
@@ -188,49 +188,6 @@ class TestContent(unittest.TestCase):
         by_slug = {i["slug"]: i for i in content.list_markdown("posts")}
         self.assertTrue(by_slug["pinned-post"]["pinned"])
         self.assertFalse(by_slug["normal-post"]["pinned"])
-
-    def test_normalize_friend_url_accepts_http_https(self):
-        self.assertEqual(
-            content.normalize_friend_url("  https://example.com/blog?q=1  "),
-            "https://example.com/blog?q=1",
-        )
-        self.assertEqual(
-            content.normalize_friend_url("http://example.com/"),
-            "http://example.com/",
-        )
-
-    def test_normalize_friend_url_rejects_unsafe(self):
-        for bad in ("", "javascript:alert(1)", "ftp://example.com", "https://", "https://u:p@example.com", "https://example.com/a b", "https://example.com/\"><script>"):
-            with self.assertRaises(ValueError):
-                content.normalize_friend_url(bad)
-
-    def test_list_markdown_includes_friend_fields(self):
-        content.write_markdown(
-            "friends",
-            "example",
-            {
-                "title": "示例站",
-                "href": "https://example.com/",
-                "description": "一个示例站点",
-                "weight": 2,
-            },
-            "",
-        )
-        content.write_markdown(
-            "friends",
-            "another",
-            {
-                "title": "另一个",
-                "href": "https://another.example/",
-                "description": "另一个站点",
-                "weight": 1,
-            },
-            "",
-        )
-        items = content.list_markdown("friends", sort="weight", order="asc")
-        self.assertEqual([i["slug"] for i in items], ["another", "example"])
-        self.assertTrue(content.list_markdown("friends", q="another.example"))
-        self.assertTrue(content.list_markdown("friends", q="示例站点"))
 
     def test_sanitize_inline_svg_removes_script_and_events(self):
         safe = '<svg viewBox="0 0 24 24"><path d="M0 0"/></svg>'

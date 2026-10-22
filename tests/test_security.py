@@ -7,8 +7,8 @@ from admin import security
 
 class TestSecurity(unittest.TestCase):
     def test_password_hash_roundtrip(self):
-        stored = security.hash_password("Li&Blog@2026")
-        self.assertTrue(security.verify_password("Li&Blog@2026", stored))
+        stored = security.hash_password("Li&Notes@2026")
+        self.assertTrue(security.verify_password("Li&Notes@2026", stored))
 
     def test_password_rejects_wrong(self):
         stored = security.hash_password("correct")

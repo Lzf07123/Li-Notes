@@ -4,8 +4,6 @@ import re
 import shutil
 import time
 from pathlib import Path
-from urllib.parse import urlparse
-
 import yaml
 
 from admin.config import settings
@@ -51,27 +49,6 @@ def safe_resolve(root: Path, rel: str) -> Path:
     if not p.is_relative_to(root_r):
         raise ValueError("path escape")
     return p
-
-def normalize_friend_url(value: str) -> str:
-    """友情链接校验：只接受 http/https 绝对地址，拒绝空白/控制字符/凭据。"""
-    if not isinstance(value, str):
-        raise ValueError("链接不能为空")
-    url = value.strip()
-    if not url:
-        raise ValueError("链接不能为空")
-    if len(url) > 2048:
-        raise ValueError("链接过长")
-    if any(ord(ch) < 32 or ch.isspace() for ch in url):
-        raise ValueError("链接不能包含空白或控制字符")
-    if any(ch in url for ch in "\"'<>"):
-        raise ValueError("链接包含非法字符")
-    parsed = urlparse(url)
-    if parsed.scheme.lower() not in ("http", "https") or not parsed.netloc:
-        raise ValueError("仅支持 http/https 链接")
-    if parsed.username is not None or parsed.password is not None:
-        raise ValueError("链接不能包含用户名或密码")
-    return url
-
 
 def _read_frontmatter(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
@@ -195,31 +172,6 @@ def write_markdown(section: str, slug: str, frontmatter: dict, body: str) -> Non
     text = f"---\n{fm}\n---\n\n{body.strip()}\n"
     p = safe_resolve(settings.content_root, f"{section}/{slug}.md")
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(text, encoding="utf-8")
-
-
-def read_page(name: str) -> tuple[dict, str]:
-    """读取 content/<name>.md（根级单页，如 about/resources）。"""
-    p = safe_resolve(settings.content_root, f"{name}.md")
-    return _read_page_file(p)
-
-
-def _read_page_file(p: Path) -> tuple[dict, str]:
-    text = p.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
-    if len(parts) >= 3:
-        try:
-            return yaml.safe_load(parts[1]) or {}, parts[2].lstrip("\n")
-        except yaml.YAMLError:
-            return {}, text
-    return {}, text
-
-
-def write_page(name: str, frontmatter: dict, body: str) -> None:
-    """写入 content/<name>.md（根级单页）。"""
-    fm = yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False, default_flow_style=False).strip()
-    text = f"---\n{fm}\n---\n\n{body.strip()}\n"
-    p = safe_resolve(settings.content_root, f"{name}.md")
     p.write_text(text, encoding="utf-8")
 
 

@@ -1,7 +1,5 @@
 /* TEAM */
 Name: {{ hugo.Data.profile.name }}
-Role: {{ hugo.Data.profile.identity }}
-Focus: {{ hugo.Data.profile.direction }}
 
 /* SITE */
 Site: {{ hugo.Data.brand.name }}

@@ -1,0 +1,8 @@
+{{- $arg := .Get 0 -}}
+{{- $segs := split $arg "/" -}}
+{{- $title := index $segs (sub (len $segs) 1) -}}
+{{- $href := "" -}}
+{{- range $p := where .Site.RegularPages "Section" "posts" -}}
+  {{- if eq $p.Title $title -}}{{- $href = $p.RelPermalink -}}{{- end -}}
+{{- end -}}
+{{- if $href -}}<a href="{{ $href }}">{{ $title }}</a>{{- else -}}{{ $title }}{{- end -}}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ label }} · Li&Blog 后台{% endblock %}
+{% block title %}{{ label }} · Li&Notes 后台{% endblock %}
 {% block content %}
 <nav class="admin-breadcrumb" aria-label="面包屑">
   <a href="/{{ admin_path }}/">仪表盘</a>
@@ -9,20 +9,15 @@
 <div class="list-head">
   <h1>{{ label }}（{{ total }}）</h1>
   <div class="list-actions">
-    {% if section in ["posts", "projects", "timeline", "friends"] %}
-    <a class="btn" href="/{{ admin_path }}/{{ section }}/new">新建</a>
-    {% endif %}
-    {% if section == "posts" %}
+    <a class="btn" href="/{{ admin_path }}/posts/new">新建</a>
     <a class="btn btn-sm btn-secondary" href="/{{ admin_path }}/posts/import">批量导入</a>
     <a class="btn btn-sm btn-secondary" href="/{{ admin_path }}/posts/export?q={{ q|urlencode }}&status={{ status }}&tag={{ tag|urlencode }}&pinned={{ pinned }}&sort={{ sort }}&order={{ order }}">导出 CSV</a>
-    {% endif %}
     <a class="btn btn-sm btn-ghost" href="/{{ section }}/" target="_blank" rel="noopener">查看公开页</a>
   </div>
 </div>
 <form class="list-filters" method="get" action="/{{ admin_path }}/{{ section }}">
-  <label class="visually-hidden" for="q">{{ '搜索名称、标识或链接' if section == 'friends' else '搜索标题、标识或标签' }}</label>
-  <input id="q" type="search" name="q" value="{{ q }}" placeholder="{{ '搜索名称 / 标识 / 链接' if section == 'friends' else '搜索标题 / 标识 / 标签' }}">
-  {% if section == "posts" %}
+  <label class="visually-hidden" for="q">搜索标题、标识或标签</label>
+  <input id="q" type="search" name="q" value="{{ q }}" placeholder="搜索标题 / 标识 / 标签">
   <select name="status" aria-label="按状态筛选" data-custom-dropdown>
     <option value="">全部状态</option>
     <option value="published" {% if status == "published" %}selected{% endif %}>已发布</option>
@@ -39,7 +34,6 @@
     <option value="1" {% if pinned == "1" %}selected{% endif %}>已置顶</option>
     <option value="0" {% if pinned == "0" %}selected{% endif %}>未置顶</option>
   </select>
-  {% endif %}
   <select name="per_page" aria-label="每页条数" data-custom-dropdown>
     {% for n in [20, 50, 100] %}
     <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }} 条/页</option>
@@ -48,13 +42,12 @@
   <input type="hidden" name="sort" value="{{ sort }}">
   <input type="hidden" name="order" value="{{ order }}">
   <button type="submit" class="btn btn-secondary btn-sm">筛选</button>
-{% set default_sort = "weight" if section == "friends" else "date" %}
-{% set default_order = "asc" if section == "friends" else "desc" %}
+{% set default_sort = "date" %}
+{% set default_order = "desc" %}
 {% if q or status or tag or pinned or sort != default_sort or order != default_order or per_page != 50 %}
   <a class="btn-link" href="/{{ admin_path }}/{{ section }}" data-clear-filters>清除</a>
   {% endif %}
 </form>
-{% if section == "posts" %}
 <form id="bulk-form" class="bulk-bar" method="post" action="/{{ admin_path }}/posts/bulk">
   <input type="hidden" name="_csrf" value="{{ csrf }}">
   <select name="action" aria-label="批量操作" data-custom-dropdown>
@@ -79,8 +72,7 @@
   </label>
   <span id="bulk-count" class="bulk-count">已选 0 篇</span>
 </form>
-{% endif %}
-{% set bulk_form_id = "bulk-form" if section == "posts" else "" %}
+{% set bulk_form_id = "bulk-form" %}
 {% include "partials/table.html" %}
 <script>
   {% if section == "posts" %}
@@ -150,7 +142,7 @@
   });
   (function () {
     var section = "{{ section }}";
-    var key = "liblog-list-" + section;
+    var key = "linotes-list-" + section;
     var params = new URLSearchParams(location.search);
     var hasFilter = ["q", "status", "tag", "pinned", "sort", "order", "per_page"].some(function (k) {
       return params.has(k);

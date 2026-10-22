@@ -51,16 +51,13 @@
           </fieldset>
           <fieldset>
             <legend>个人</legend>
-            <label>姓名<input type="text" name="name" value="{{ profile.name }}"></label>
-            <label>身份<input type="text" name="identity" value="{{ profile.identity }}"></label>
-            <label>方向<input type="text" name="direction" value="{{ profile.direction }}"></label>
-            <label>当前目标<input type="text" name="goal" value="{{ profile.goal }}"></label>
+            <label>作者姓名<input type="text" name="name" value="{{ profile.name }}"></label>
           </fieldset>
         </div>
         <button type="submit" class="btn btn-block">下一步：创建管理员</button>
       </form>
       <div class="auth-divider">或者从备份恢复建站</div>
-      <p class="auth-sub">上传 Li&Blog 备份 ZIP，直接恢复内容、配置、媒体与数据库，跳过手工设置。</p>
+      <p class="auth-sub">上传 Li&Notes 备份 ZIP，直接恢复内容、配置、媒体与数据库，跳过手工设置。</p>
       <form method="post" action="/{{ admin_path }}/setup/restore" enctype="multipart/form-data" class="auth-form">
         <input type="hidden" name="_csrf" value="{{ csrf }}">
         {% if setup_token_required %}<label>安装令牌（部署时设置的 SETUP_TOKEN）<input type="password" name="setup_token" autocomplete="off" required></label>{% endif %}

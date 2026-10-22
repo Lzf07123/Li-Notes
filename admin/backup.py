@@ -15,7 +15,7 @@ from admin.config import ROOT, settings
 def build_backup_zip() -> bytes:
     buf = io.BytesIO()
     manifest = {
-        "app": "Li&Blog",
+        "app": "Li&Notes",
         "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "sections": {},
     }

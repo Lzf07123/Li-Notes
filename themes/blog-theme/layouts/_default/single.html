@@ -48,22 +48,8 @@
   {{ with $strings.footer.license }}
   <p class="article-license">{{ $strings.common.license_prefix }} <a href="{{ $strings.footer.license_url }}" target="_blank" rel="noopener">{{ . }}</a></p>
   {{ end }}
-  {{ if .Params.show_skills }}
-    <h2 class="section-title">{{ hugo.Data.strings.home.skills_title }}</h2>
-    <div class="badge-row">
-      {{ range hugo.Data.profile.skills }}{{ partial "badge.html" (merge . (dict "readme" true)) }}{{ end }}
-    </div>
-  {{ end }}
-  {{ with hugo.Data.profile.links }}
-  <h2 class="section-title">{{ $strings.common.links_title }}</h2>
-  <div class="badge-row">
-    {{ range . }}<a class="badge badge-primary" href="{{ .href }}" target="_blank" rel="noopener">{{ .label }}</a>{{ end }}
-  </div>
-  {{ end }}
-  {{ if and (or (eq .Section "posts") (eq .Section "timeline")) (or .PrevInSection .NextInSection) }}
-  {{ $nav_label := $strings.common.post_nav }}
-  {{ if eq .Section "timeline" }}{{ $nav_label = $strings.common.timeline_nav }}{{ end }}
-  <nav class="post-nav" aria-label="{{ $nav_label }}">
+  {{ if and (eq .Section "posts") (or .PrevInSection .NextInSection) }}
+  <nav class="post-nav" aria-label="{{ $strings.common.post_nav }}">
     {{ with .PrevInSection }}
     <a class="post-nav-item" href="{{ .RelPermalink }}">
       <span>{{ $strings.common.prev }}</span>

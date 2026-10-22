@@ -1,19 +1,17 @@
 {% extends "base.html" %}
-{% block title %}仪表盘 · Li&Blog 后台{% endblock %}
+{% block title %}仪表盘 · Li&Notes 后台{% endblock %}
 {% block content %}
 <div class="dashboard-head">
   <h1>仪表盘</h1>
-  <a class="btn" href="/{{ admin_path }}/posts/new">新建文章</a>
+  <a class="btn" href="/{{ admin_path }}/posts/new">新建笔记</a>
 </div>
 <div class="stat-cards">
-  <div class="stat-card"><span>文章</span><strong>{{ counts.posts }}</strong></div>
+  <div class="stat-card"><span>笔记</span><strong>{{ counts.posts }}</strong></div>
   <div class="stat-card"><span>草稿</span><strong>{{ drafts|length }}</strong></div>
-  <div class="stat-card"><span>项目</span><strong>{{ counts.projects }}</strong></div>
-  <div class="stat-card"><span>时间线</span><strong>{{ counts.timeline }}</strong></div>
   <div class="stat-card"><span>媒体</span><strong>{{ media_count }}</strong></div>
 </div>
 <div class="quick-actions">
-  <a class="btn btn-secondary btn-sm" href="/{{ admin_path }}/posts">文章管理</a>
+  <a class="btn btn-secondary btn-sm" href="/{{ admin_path }}/posts">笔记管理</a>
   <a class="btn btn-secondary btn-sm" href="/{{ admin_path }}/posts?status=draft">草稿（{{ drafts|length }}）</a>
   <a class="btn btn-secondary btn-sm" href="/{{ admin_path }}/media">媒体库</a>
   <a class="btn btn-secondary btn-sm" href="/" target="_blank" rel="noopener">查看公开站</a>

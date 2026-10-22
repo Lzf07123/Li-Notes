@@ -1,4 +1,4 @@
-# Li&Blog admin 镜像（多阶段构建，运行期非 root）
+# Li&Notes admin 镜像（多阶段构建，运行期非 root）
 # 软件源与镜像变量（构建时 --build-arg 覆盖）：
 #   DOCKER_MIRROR_PREFIX Docker Hub 镜像名前缀，如 docker.m.daocloud.io/（须以 / 结尾；留空=官方源）
 #   APT_MIRROR          apt 镜像主机，如 mirrors.tuna.tsinghua.edu.cn / mirrors.aliyun.com

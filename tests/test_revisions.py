@@ -32,8 +32,8 @@ class TestRevisions(unittest.TestCase):
         self.assertIn("title", fm)
 
     def test_non_posts_section_ignored(self):
-        save_revision("projects", "proj", {"title": "P"}, "正文")
-        self.assertEqual(list_revisions("projects", "proj"), [])
+        save_revision("drafts", "note", {"title": "N"}, "正文")
+        self.assertEqual(list_revisions("drafts", "note"), [])
 
 
 if __name__ == "__main__":

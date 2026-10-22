@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}批量导入 · Li&Blog 后台{% endblock %}
+{% block title %}批量导入 · Li&Notes 后台{% endblock %}
 {% block content %}
 <style>
   .import-pending-list {
@@ -13,13 +13,13 @@
 <nav class="admin-breadcrumb" aria-label="面包屑">
   <a href="/{{ admin_path }}/">仪表盘</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
-  <a href="/{{ admin_path }}/posts">文章</a>
+  <a href="/{{ admin_path }}/posts">笔记</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <span aria-current="page">批量导入</span>
 </nav>
 <div class="list-head">
-  <h1>批量导入文章</h1>
-  <a class="btn btn-ghost" href="/{{ admin_path }}/posts">返回文章</a>
+  <h1>批量导入笔记</h1>
+  <a class="btn btn-ghost" href="/{{ admin_path }}/posts">返回笔记</a>
 </div>
 {% if flash %}<p class="flash" role="status">{{ flash }}</p>{% endif %}
 {% if result %}
@@ -68,7 +68,7 @@
   {% endif %}
   {% if result.imported %}
   <div class="form-actions">
-    <a class="btn" href="/{{ admin_path }}/posts">返回文章列表</a>
+    <a class="btn" href="/{{ admin_path }}/posts">返回笔记列表</a>
   </div>
   {% endif %}
 </div>
@@ -92,7 +92,7 @@
       </label>
     </div>
   </fieldset>
-  <label><input type="checkbox" name="overwrite" value="1"> 覆盖同名文章</label>
+  <label><input type="checkbox" name="overwrite" value="1"> 覆盖同名笔记</label>
   <div class="form-actions">
     <button type="submit" class="btn">导入并重建</button>
   </div>

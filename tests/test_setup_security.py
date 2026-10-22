@@ -29,7 +29,6 @@ class SetupSecurityBase(unittest.TestCase):
         settings.setup_token = ""
         media.MEDIA_ROOT = root / "img"
         (settings.content_root / "posts").mkdir(parents=True)
-        (settings.content_root / "projects").mkdir(parents=True)
         settings.config_root.mkdir(parents=True)
         settings.preview_root.mkdir(parents=True)
         media.MEDIA_ROOT.mkdir(parents=True)
@@ -56,7 +55,7 @@ class AnonSessionBypassTest(SetupSecurityBase):
     def setUp(self):
         super().setUp()
         conn = connect()
-        create_admin(conn, "admin", security.hash_password("Li&Blog@2026"))
+        create_admin(conn, "admin", security.hash_password("Li&Notes@2026"))
         conn.close()
 
     def test_anon_session_rejected_on_protected_routes(self):
@@ -73,7 +72,7 @@ class AnonSessionBypassTest(SetupSecurityBase):
             csrf = self._csrf(html)
             r = client.post(
                 "/admin/login",
-                data={"username": "admin", "password": "Li&Blog@2026", "_csrf": csrf},
+                data={"username": "admin", "password": "Li&Notes@2026", "_csrf": csrf},
                 follow_redirects=False,
             )
             self.assertEqual(r.status_code, 303)
@@ -87,7 +86,7 @@ class SetupBasicGuardTest(SetupSecurityBase):
     def setUp(self):
         super().setUp()
         conn = connect()
-        create_admin(conn, "admin", security.hash_password("Li&Blog@2026"))
+        create_admin(conn, "admin", security.hash_password("Li&Notes@2026"))
         conn.close()
 
     def test_anon_post_cannot_overwrite_brand(self):
@@ -103,9 +102,6 @@ class SetupBasicGuardTest(SetupSecurityBase):
                     "promise": "x",
                     "persona": "x",
                     "name": "x",
-                    "identity": "x",
-                    "direction": "x",
-                    "goal": "x",
                 },
                 follow_redirects=False,
             )
@@ -168,8 +164,8 @@ class SetupTokenTest(SetupSecurityBase):
                 data={
                     "_csrf": csrf,
                     "username": "admin",
-                    "password": "Li&Blog@2026",
-                    "confirm": "Li&Blog@2026",
+                    "password": "Li&Notes@2026",
+                    "confirm": "Li&Notes@2026",
                 },
                 follow_redirects=False,
             )

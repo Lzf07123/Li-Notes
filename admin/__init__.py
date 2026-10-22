@@ -1,1 +1,1 @@
-"""Li&Blog 管理后台（FastAPI）。"""
+"""Li&Notes 管理后台（FastAPI）。"""

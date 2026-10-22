@@ -65,7 +65,7 @@ def audit_content(root=None) -> list[dict]:
         if not url or url.startswith(("#", "http://", "https://", "mailto:", "data:")):
             return
         clean = url.split("#")[0].split("?")[0].rstrip("/")
-        if clean.startswith(("/posts/", "/projects/", "/timeline/")):
+        if clean.startswith("/posts/"):
             rel = clean.lstrip("/")
             if not any(
                 k == f"{rel}.md" or k.startswith(f"{rel}/") for k in by_rel
@@ -103,7 +103,7 @@ def audit_content(root=None) -> list[dict]:
     # 内容质量
     titles: dict[str, dict[str, str]] = {}
     for page in pages:
-        if page["section"] in ("posts", "projects", "timeline") and not page["body"].strip():
+        if page["section"] == "posts" and not page["body"].strip():
             issues.append(
                 {
                     "severity": "warning",

@@ -1,82 +1,9 @@
 {{ define "main" }}
-{{ $brand := hugo.Data.brand }}
-{{ $profile := hugo.Data.profile }}
-{{ $home := hugo.Data.homepage }}
-{{ $strings := hugo.Data.strings }}
 {{ $posts := where .Site.RegularPages "Section" "posts" }}
-{{ $pinnedPosts := where $posts "Params.pinned" true }}
-{{ $normalPosts := where $posts "Params.pinned" "ne" true }}
-{{ $projects := where .Site.RegularPages "Section" "projects" }}
-{{ $timeline := where .Site.RegularPages "Section" "timeline" }}
-
-<header class="hero">
-  <div class="hero-inner" id="hero-inner">
-    <p class="hero-kicker" data-blur>{{ $strings.home.hero_title }}</p>
-    <h1 class="hero-title" data-blur>{{ $profile.name }}</h1>
-    <p class="hero-tagline" data-blur>{{ $brand.tagline }}</p>
-    <p class="hero-meta" data-blur>{{ $profile.identity }} · {{ $profile.direction }}</p>
-    <p class="hero-goal" data-blur>{{ $strings.home.goal_title }}：{{ $profile.goal }}</p>
-    <p class="hero-actions">
-      <a class="btn btn-light" href="{{ "posts/" | relURL }}">{{ $strings.home.read_blog }}</a>
-      <a class="btn btn-dark" href="{{ "about/" | relURL }}">{{ $strings.home.about_me }}</a>
-    </p>
-    {{ if $home.hero.show_skills }}
-    <div class="badge-row hero-skills">
-      {{ range first (int $home.hero.skills_limit) $profile.skills }}
-        {{ partial "badge.html" (merge . (dict "readme" true)) }}
-      {{ end }}
-    </div>
-    {{ end }}
-    <div class="badge-row">
-      {{ range where $projects "Params.show_on_home" true }}
-        {{ with .Params.badge }}{{ partial "badge.html" . }}{{ end }}
-      {{ end }}
-    </div>
-  </div>
-</header>
-
-<section class="section">
-  <h2 class="section-title">{{ $strings.home.journey_title }}</h2>
-  <div class="journey-panel card">
-    {{ range first (int $home.journey.preview_count) $timeline.ByDate.Reverse }}
-      <div class="journey-row">
-        <time class="journey-date">{{ .Date.Format "2006-01" }}</time>
-        <div class="journey-body">
-          <div class="journey-head">
-            <h3>{{ .Title }}</h3>
-            {{ with .Params.kind }}<span class="badge badge-primary">{{ . }}</span>{{ end }}
-          </div>
-          {{ with .Summary }}<p>{{ . }}</p>{{ end }}
-        </div>
-      </div>
-    {{ end }}
-  </div>
-  <p><a class="more-link" href="{{ "timeline/" | relURL }}">{{ $strings.home.view_full }}</a></p>
-</section>
-
-<section class="section">
-  <h2 class="section-title">{{ $strings.home.projects_title }}</h2>
-  <div class="masonry masonry-projects">
-    {{ range first (int $home.projects.max_cards) $projects }}
-      {{ partial "project-card.html" (dict "page" . "level" 3) }}
-    {{ end }}
-  </div>
-</section>
-
-<section class="section">
-  <h2 class="section-title">{{ $strings.home.latest_title }}</h2>
-  <div class="masonry masonry-posts">
-    {{ $count := int $home.posts.latest_count }}
-    {{ $pinnedShown := first $count $pinnedPosts.ByDate.Reverse }}
-    {{ range $pinnedShown }}
-      {{ partial "post-card.html" (dict "page" . "level" 3) }}
-    {{ end }}
-    {{ $normalShown := first (sub $count (len $pinnedShown)) $normalPosts.ByDate.Reverse }}
-    {{ range $normalShown }}
-      {{ partial "post-card.html" (dict "page" . "level" 3) }}
-    {{ end }}
-  </div>
-  <p><a class="more-link" href="{{ "posts/" | relURL }}">{{ $strings.home.view_all }}</a></p>
-</section>
-
+{{ $pinned := where $posts "Params.pinned" true }}
+{{ $normal := where $posts "Params.pinned" "ne" true }}
+<div class="post-list">
+  {{ range $pinned.ByDate.Reverse }}{{ partial "post-card.html" . }}{{ end }}
+  {{ range $normal.ByDate.Reverse }}{{ partial "post-card.html" . }}{{ end }}
+</div>
 {{ end }}

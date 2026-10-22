@@ -8,7 +8,7 @@ from admin.config import settings
 from admin.db import connect
 from admin.security import new_token
 
-COOKIE = "liblog_admin_session"
+COOKIE = "linotes_admin_session"
 
 
 def create_session(kind: str, sub: Optional[str] = None, sid: Optional[str] = None) -> str:

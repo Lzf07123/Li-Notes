@@ -23,7 +23,6 @@ FINGERPRINT_FILES = {
     "css.tokens": "themes/blog-theme/static/css/tokens.css",
     "css.style": "themes/blog-theme/static/css/style.css",
     "css.admin": "themes/blog-theme/static/css/admin.css",
-    "js.effects": "themes/blog-theme/static/js/effects-react.js",
     "js.fuse": "themes/blog-theme/static/js/fuse.min.js",
     "js.reading_progress": "themes/blog-theme/static/js/reading-progress.js",
     "js.admin_dropdown": "themes/blog-theme/static/js/admin-dropdown.js",
@@ -101,7 +100,7 @@ def validate_content_links(root):
         if not url or url.startswith(("#", "http://", "https://", "mailto:", "data:")):
             return
         clean = url.split("#")[0].split("?")[0].rstrip("/")
-        if clean.startswith(("/posts/", "/projects/", "/timeline/")):
+        if clean.startswith("/posts/"):
             rel = clean.lstrip("/")
             candidates = [
                 content_root / f"{rel}.md",
@@ -109,13 +108,6 @@ def validate_content_links(root):
                 content_root / rel / "index.md",
             ]
             if not any(c.exists() for c in candidates):
-                errors.append(f"{source}: 内部链接不存在 {url}")
-        elif clean in ("/about", "/resources") or clean.startswith(
-            ("/about/", "/resources/")
-        ):
-            name = clean.strip("/").split("/")[0]
-            target = content_root / f"{name}.md"
-            if not target.exists():
                 errors.append(f"{source}: 内部链接不存在 {url}")
         elif clean.startswith(("/img/", "/assets/")):
             rel = clean.lstrip("/")
@@ -367,7 +359,7 @@ def build(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Li&Blog 分段构建编排")
+    parser = argparse.ArgumentParser(description="Li&Notes 分段构建编排")
     parser.add_argument("--full", action="store_true", help="全量构建并发布到 output/")
     parser.add_argument("--preview", action="store_true", help="构建草稿到 .preview-out/")
     parser.add_argument("--keep-tmp", action="store_true", help="保留临时目录（调试）")

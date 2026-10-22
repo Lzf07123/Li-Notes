@@ -1,4 +1,4 @@
-"""Li&Blog 管理后台主应用：Setup、双登录、八栏目、预览与重建。"""
+"""Li&Notes 管理后台主应用：Setup、双登录、文章管理、预览与重建。"""
 
 import datetime
 import os
@@ -52,7 +52,10 @@ from admin.uploads import read_limited
 
 def _bootstrap_build() -> None:
     """admin 每次启动自动全量构建；失败只告警不阻塞启动（LIBLOG_BOOTSTRAP_BUILD=0 可关闭）。"""
-    if os.getenv("LIBLOG_BOOTSTRAP_BUILD", "1") == "0":
+    bootstrap = os.getenv("LINOTES_BOOTSTRAP_BUILD")
+    if bootstrap is None:
+        bootstrap = os.getenv("LIBLOG_BOOTSTRAP_BUILD", "1")
+    if bootstrap == "0":
         return
     try:
         result, elapsed = build.run_full()
@@ -86,7 +89,7 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.session_secret,
-    session_cookie="liblog_oauth_state",
+    session_cookie="linotes_oauth_state",
     max_age=3600,
     same_site="lax",
     https_only=settings.cookie_secure,
@@ -153,14 +156,9 @@ ADMIN_NAV = [
     {
         "label": "内容",
         "items": [
-            {"label": "文章", "path": "/posts", "icon": "file"},
+            {"label": "笔记", "path": "/posts", "icon": "file"},
             {"label": "标签", "path": "/tags", "icon": "text"},
             {"label": "回收站", "path": "/trash", "icon": "archive"},
-            {"label": "项目", "path": "/projects", "icon": "folder"},
-            {"label": "时间线", "path": "/timeline", "icon": "clock"},
-            {"label": "关于我", "path": "/about", "icon": "user"},
-            {"label": "资源", "path": "/resources", "icon": "book"},
-            {"label": "友情链接", "path": "/friends", "icon": "link"},
         ],
     },
     {
@@ -168,8 +166,7 @@ ADMIN_NAV = [
         "items": [
             {"label": "品牌", "path": "/config/brand", "icon": "palette"},
             {"label": "文案", "path": "/config/strings", "icon": "text"},
-            {"label": "首页", "path": "/config/homepage", "icon": "home"},
-            {"label": "资料", "path": "/config/profile", "icon": "card"},
+            {"label": "作者资料", "path": "/config/profile", "icon": "card"},
             {"label": "账号", "path": "/settings/account", "icon": "user"},
         ],
     },
@@ -249,20 +246,14 @@ def _is_future(date_text: str) -> bool:
 def _path_title_map() -> dict:
     """统计路径 → 内容标题映射，用于把访问统计变成可读标题。"""
     titles: dict[str, str] = {}
-    for section in ("posts", "projects", "timeline"):
-        base = settings.content_root / section
-        if not base.exists():
+    base = settings.content_root / "posts"
+    if not base.exists():
+        return titles
+    for p in base.glob("*.md"):
+        if p.stem in ("_index", "index"):
             continue
-        for p in base.glob("*.md"):
-            if p.stem in ("_index", "index"):
-                continue
-            fm = store._read_frontmatter(p)
-            titles[f"/{section}/{p.stem}/"] = str(fm.get("title") or p.stem)
-    for name in ("about", "resources"):
-        p = settings.content_root / f"{name}.md"
-        if p.exists():
-            fm = store._read_frontmatter(p)
-            titles[f"/{name}/"] = str(fm.get("title") or name)
+        fm = store._read_frontmatter(p)
+        titles[f"/posts/{p.stem}/"] = str(fm.get("title") or p.stem)
     return titles
 
 
@@ -610,14 +601,11 @@ def setup_basic_page(request: Request):
 @app.post(ap("/setup/basic"))
 def setup_basic_submit(
     request: Request,
-    site_name: str = Form("Li&Blog"),
+    site_name: str = Form("Li&Notes"),
     tagline: str = Form(""),
     promise: str = Form(""),
     persona: str = Form(""),
     name: str = Form(""),
-    identity: str = Form(""),
-    direction: str = Form(""),
-    goal: str = Form(""),
     csrf_token: str = Form("", alias="_csrf"),
     setup_token: str = Form(""),
 ):
@@ -630,7 +618,7 @@ def setup_basic_submit(
     brand = store.load_yaml("brand")
     brand.update({"name": site_name, "tagline": tagline, "promise": promise, "persona": persona})
     profile = store.load_yaml("profile")
-    profile.update({"name": name, "identity": identity, "direction": direction, "goal": goal})
+    profile.update({"name": name})
     try:
         store.save_yaml("brand", brand)
         store.save_yaml("profile", profile)
@@ -762,7 +750,7 @@ def setup_oidc_bind(request: Request, csrf_token: str = Form("", alias="_csrf"))
 @app.get(ap("/"), response_class=HTMLResponse)
 def dashboard(request: Request):
     require_login(request)
-    counts = {s: len(store.list_markdown(s)) for s in ("posts", "projects", "timeline")}
+    counts = {"posts": len(store.list_markdown("posts"))}
     posts = store.list_markdown("posts")
     posts.sort(key=lambda it: not it.get("pinned", False))
     drafts = [p for p in posts if p.get("status") == "draft"]
@@ -1276,7 +1264,7 @@ def stats_export(request: Request, start: str = "", end: str = ""):
         media_type="text/csv; charset=utf-8",
         headers={
             "Content-Disposition": (
-                f'attachment; filename="liblog-stats-{start or "all"}-{end or "now"}.csv"'
+                f'attachment; filename="linotes-stats-{start or "all"}-{end or "now"}.csv"'
             )
         },
     )
@@ -1654,12 +1642,8 @@ def section_duplicate(
             i += 1
         fm = dict(fm)
         fm["title"] = f"{fm.get('title', slug)}（副本）"
-        if section == "friends":
-            fm.pop("status", None)
-            fm.pop("date", None)
-        else:
-            fm["status"] = "draft"
-            fm["date"] = datetime.date.today().isoformat()
+        fm["status"] = "draft"
+        fm["date"] = datetime.date.today().isoformat()
         store.write_markdown(section, new_slug, fm, body)
         _audit("content_duplicate", f"{section}/{slug}->{new_slug}")
     except (ValueError, FileNotFoundError) as exc:
@@ -1792,11 +1776,11 @@ def backup_download(request: Request):
     require_login(request)
     data = backup_store.build_backup_zip()
     ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    _audit("backup_download", f"liblog-backup-{ts}.zip")
+    _audit("backup_download", f"linotes-backup-{ts}.zip")
     return Response(
         content=data,
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="liblog-backup-{ts}.zip"'},
+        headers={"Content-Disposition": f'attachment; filename="linotes-backup-{ts}.zip"'},
     )
 
 
@@ -1827,53 +1811,20 @@ async def backup_restore(
 # ---------- 栏目：列表 / 编辑 / 保存 / 删除 ----------
 
 SECTIONS = {
-    "posts": {"label": "文章", "single": False},
-    "projects": {"label": "项目", "single": False},
-    "timeline": {"label": "时间线", "single": False},
-    "about": {"label": "关于我", "single": True},
-    "resources": {"label": "资源", "single": True},
-    "friends": {"label": "友情链接", "single": False},
+    "posts": {"label": "笔记", "single": False},
 }
 
 
 def _edit_fields(section: str, fm: dict) -> list:
-    if section == "posts":
-        return [
-            ("title", "标题", "text", fm.get("title", "")),
-            ("date", "日期", "text", fm.get("date", datetime.date.today().isoformat())),
-            ("status", "状态", "select", fm.get("status", "published"), ["published", "draft"]),
-            ("tags", "标签（逗号分隔）", "text", ", ".join(fm.get("tags") or [])),
-            ("summary", "摘要", "textarea", fm.get("summary", "")),
-            ("cover", "封面图路径（/img/…，选填）", "text", fm.get("cover", "")),
-            ("pinned", "置顶文章", "checkbox", bool(fm.get("pinned", False))),
-        ]
-    if section == "projects":
-        return [
-            ("title", "名称", "text", fm.get("title", "")),
-            ("date", "发布时间（可选，留空不显示）", "text", fm.get("date", "")),
-            ("repo", "仓库链接", "text", fm.get("repo", "")),
-            ("tech", "技术栈（逗号分隔）", "text", ", ".join(fm.get("tech") or [])),
-            ("status", "状态", "text", fm.get("status", "active")),
-            ("summary", "简介", "textarea", fm.get("summary", "")),
-            ("badge_label", "徽章标签", "text", (fm.get("badge") or {}).get("label", "")),
-            ("badge_color", "徽章颜色", "text", (fm.get("badge") or {}).get("color", "")),
-            ("badge_href", "徽章链接", "text", (fm.get("badge") or {}).get("href", "")),
-        ]
-    if section == "timeline":
-        return [
-            ("title", "标题", "text", fm.get("title", "")),
-            ("date", "日期", "text", fm.get("date", datetime.date.today().isoformat())),
-            ("kind", "类型", "text", fm.get("kind", "里程碑")),
-            ("summary", "摘要", "textarea", fm.get("summary", "")),
-        ]
-    if section == "friends":
-        return [
-            ("title", "站点名称", "text", fm.get("title", "")),
-            ("href", "链接（http/https）", "text", fm.get("href", "")),
-            ("description", "简介", "textarea", fm.get("description", "")),
-            ("weight", "排序（数字越小越靠前）", "text", fm.get("weight", 0)),
-        ]
-    return [("title", "标题", "text", fm.get("title", ""))]
+    return [
+        ("title", "标题", "text", fm.get("title", "")),
+        ("date", "日期", "text", fm.get("date", datetime.date.today().isoformat())),
+        ("status", "状态", "select", fm.get("status", "published"), ["published", "draft"]),
+        ("tags", "标签（逗号分隔）", "text", ", ".join(fm.get("tags") or [])),
+        ("summary", "摘要", "textarea", fm.get("summary", "")),
+        ("cover", "封面图路径（/img/…，选填）", "text", fm.get("cover", "")),
+        ("pinned", "置顶文章", "checkbox", bool(fm.get("pinned", False))),
+    ]
 
 
 def _seo_panel(section: str, slug: str, fm: dict, body: str = "") -> Optional[dict]:
@@ -1920,19 +1871,10 @@ def section_list(
     require_login(request)
     if section not in SECTIONS:
         raise HTTPException(404)
-    if SECTIONS[section]["single"]:
-        return RedirectResponse(ap(f"/{section}/edit"), status_code=302)
-    if section == "friends":
-        if sort not in ("title", "href", "weight", "slug"):
-            sort = "weight"
-            order = "asc"
-        if order not in ("asc", "desc"):
-            order = "asc"
-    else:
-        if sort not in ("title", "date", "status", "slug"):
-            sort = "date"
-        if order not in ("asc", "desc"):
-            order = "desc"
+    if sort not in ("title", "date", "status", "slug"):
+        sort = "date"
+    if order not in ("asc", "desc"):
+        order = "desc"
     per_page = min(max(int(per_page), 10), 100) if per_page else 50
     items = store.list_markdown(
         section, q=q, status=status, tag=tag, pinned=pinned, sort=sort, order=order
@@ -1963,23 +1905,13 @@ def section_list(
         params.update(over)
         return query_url(base, **params)
 
-    columns = []
-    if section == "friends":
-        columns = [
-            {"key": "title", "label": "名称", "type": "link", "sortable": True},
-            {"key": "href", "label": "链接", "type": "text", "sortable": True},
-            {"key": "weight", "label": "排序", "type": "number", "align": "right", "sortable": True},
-            {"key": "actions", "label": "操作", "type": "actions"},
-        ]
-    else:
-        if section == "posts":
-            columns.append({"key": "select", "label": "选择", "type": "select"})
-        columns += [
-            {"key": "title", "label": "标题", "type": "link", "sortable": True},
-            {"key": "date", "label": "日期", "type": "text", "sortable": True},
-            {"key": "status", "label": "状态", "type": "badge", "sortable": section != "timeline"},
-            {"key": "actions", "label": "操作", "type": "actions"},
-        ]
+    columns = [
+        {"key": "select", "label": "选择", "type": "select"},
+        {"key": "title", "label": "标题", "type": "link", "sortable": True},
+        {"key": "date", "label": "日期", "type": "text", "sortable": True},
+        {"key": "status", "label": "状态", "type": "badge", "sortable": True},
+        {"key": "actions", "label": "操作", "type": "actions"},
+    ]
     rows = []
     group_year = None
     for item in page_items:
@@ -2010,16 +1942,15 @@ def section_list(
                     "method": "post",
                 }
             )
-        if section != "timeline":
-            actions.append(
-                {
-                    "label": "移入回收站",
-                    "href": ap(f"/{section}/{item['slug']}/trash"),
-                    "method": "post",
-                    "danger": True,
-                    "confirm": "确定移入回收站？删除后会立即重建公开站。",
-                }
-            )
+        actions.append(
+            {
+                "label": "移入回收站",
+                "href": ap(f"/{section}/{item['slug']}/trash"),
+                "method": "post",
+                "danger": True,
+                "confirm": "确定移入回收站？删除后会立即重建公开站。",
+            }
+        )
         is_scheduled = section == "posts" and item.get("status") != "draft" and _is_future(str(item.get("date") or ""))
         status_label = STATUS_LABELS.get(item["status"], item["status"])
         status_class = ADMIN_BADGE_VARIANTS.get(item["status"], "admin-badge--muted")
@@ -2058,20 +1989,14 @@ def section_list(
             {"title": p["title"], "slug": p["slug"]} for p in store.list_markdown("posts")
         ]
     sort_links = {}
-    sort_keys = ("title", "href", "weight") if section == "friends" else ("title", "date", "status")
-    for key in sort_keys:
-        if key == "status" and section == "timeline":
-            continue
+    for key in ("title", "date", "status"):
         next_order = "asc" if (sort == key and order == "desc") else "desc"
         sort_links[key] = qurl(sort=key, order=next_order, page="")
-    if section == "friends":
-        empty = (
-            "没有匹配的友情链接，换个关键词试试。"
-            if q
-            else "还没有友情链接，点右上角“新建”添加第一个站点。"
-        )
-    else:
-        empty = "没有匹配的内容，换个关键词或清除筛选试试。" if (q or status) else "还没有内容，点右上角“新建”开始。"
+    empty = (
+        "没有匹配的笔记，换个关键词或清除筛选试试。"
+        if (q or status)
+        else "还没有笔记，点右上角“新建”开始。"
+    )
     table = {
         "caption": f"{SECTIONS[section]['label']}列表",
         "columns": columns,
@@ -2170,7 +2095,7 @@ def posts_bulk(
         except (ValueError, FileNotFoundError):
             continue
     if not changed:
-        return RedirectResponse(ap("/posts?error=没有可执行的文章"), status_code=303)
+        return RedirectResponse(ap("/posts?error=没有可执行的笔记"), status_code=303)
     _audit("posts_bulk", f"{action}:{tag or ''}:{changed}:scope={scope or 'manual'}")
     build_state.trigger_build("posts_bulk")
     message = f"已批量处理 {changed} 篇，正在后台构建…"
@@ -2218,7 +2143,7 @@ def posts_export(
     return Response(
         content="\n".join(lines) + "\n",
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="liblog-posts.csv"'},
+        headers={"Content-Disposition": 'attachment; filename="linotes-notes.csv"'},
     )
 
 
@@ -2245,38 +2170,6 @@ def section_new(request: Request, section: str):
             ]
             if section == "posts"
             else [],
-        },
-    )
-
-
-@app.get(ap("/{section}/edit"), response_class=HTMLResponse)
-def section_edit(request: Request, section: str):
-    require_login(request)
-    if section not in SECTIONS:
-        raise HTTPException(404)
-    slug = section if SECTIONS[section]["single"] else ""
-    if slug:
-        fm, body = store.read_page(section)
-    else:
-        fm, body = {}, ""
-    return render(
-        request,
-        "edit.html",
-        {
-            "section": section,
-            "slug": slug,
-            "label": SECTIONS[section]["label"],
-            "fields": _edit_fields(section, fm),
-            "all_tags": store.all_tags(),
-            "body": body,
-            "media_items": media_store.list_media()[:20],
-            "preview_path": f"/preview/{section}" if SECTIONS[section]["single"] else "",
-            "seo": _seo_panel(section, slug, fm, body),
-            "post_titles": (
-                [{"title": p["title"], "slug": p["slug"]} for p in store.list_markdown("posts")]
-                if section == "posts"
-                else []
-            ),
         },
     )
 
@@ -2336,121 +2229,73 @@ def section_save(
     tags: str = Form(""),
     summary: str = Form(""),
     cover: str = Form(""),
-    repo: str = Form(""),
-    tech: str = Form(""),
-    kind: str = Form(""),
-    badge_label: str = Form(""),
-    badge_color: str = Form(""),
-    badge_href: str = Form(""),
-    friend_url: str = Form("", alias="href"),
-    description: str = Form(""),
-    weight: str = Form(""),
     pinned: str = Form(""),
     body: str = Form(""),
 ):
     require_login(request)
     if section not in SECTIONS or not csrf_ok(request, {"_csrf": csrf_token}):
         return RedirectResponse(ap(f"/{section}?error=会话失效"), status_code=303)
-    if section == "posts" and status not in ("published", "draft"):
+    if status not in ("published", "draft"):
         return RedirectResponse(ap(f"/{section}?error=非法状态"), status_code=303)
     old_slug = ""
-    if new_slug and not SECTIONS[section]["single"]:
+    if new_slug:
         if new_slug != slug and store.markdown_exists(section, new_slug):
             return RedirectResponse(ap(f"/{section}?error=目标标识已存在"), status_code=303)
         old_slug = slug
         slug = new_slug
     try:
-        if SECTIONS[section]["single"]:
-            old, _ = store.read_page(section)
-            store.write_page(section, {**old, "title": title}, body)
-        else:
-            old = {}
-            if slug:
-                try:
-                    old, _ = store.read_markdown(section, slug)
-                except FileNotFoundError:
-                    old = {}
-            fm = dict(old)
-            if section == "posts":
-                fm.update(
-                    {
-                        "title": title,
-                        "date": date,
-                        "status": status,
-                        "tags": [t.strip() for t in tags.split(",") if t.strip()],
-                        "summary": summary,
-                        "cover": cover,
-                        "pinned": pinned == "1",
-                    }
-                )
-            elif section == "projects":
-                fm.update(
-                    {
-                        "title": title,
-                        "date": date,
-                        "repo": repo,
-                        "status": status,
-                        "tech": [t.strip() for t in tech.split(",") if t.strip()],
-                        "summary": summary,
-                        "badge": {
-                            "label": badge_label,
-                            "color": badge_color,
-                            "href": badge_href,
-                        },
-                        "show_on_home": fm.get("show_on_home", True),
-                    }
-                )
-            elif section == "friends":
-                if not title.strip():
-                    raise ValueError("站点名称不能为空")
-                parsed_weight = 0
-                if weight.strip():
-                    try:
-                        parsed_weight = int(weight.strip())
-                    except ValueError:
-                        raise ValueError("排序必须是整数")
-                    if parsed_weight < 0 or parsed_weight > 9999:
-                        raise ValueError("排序超出范围（0-9999）")
-                fm.update(
-                    {
-                        "title": title.strip(),
-                        "href": store.normalize_friend_url(friend_url),
-                        "description": description.strip(),
-                        "weight": parsed_weight,
-                    }
-                )
-            else:
-                fm.update({"title": title, "date": date, "kind": kind, "summary": summary})
-            store.write_markdown(section, slug, fm, body)
-            revisions.save_revision(section, slug, fm, body)
-            _audit("content_save", f"{section}/{slug}")
-            if old_slug and old_slug != slug:
-                try:
-                    store.delete_markdown(section, old_slug)
-                except ValueError:
-                    pass
+        old = {}
+        if slug:
+            try:
+                old, _ = store.read_markdown(section, slug)
+            except FileNotFoundError:
+                old = {}
+        fm = dict(old)
+        fm.update(
+            {
+                "title": title,
+                "date": date,
+                "status": status,
+                "tags": [t.strip() for t in tags.split(",") if t.strip()],
+                "summary": summary,
+                "cover": cover,
+                "pinned": pinned == "1",
+            }
+        )
+        store.write_markdown(section, slug, fm, body)
+        revisions.save_revision(section, slug, fm, body)
+        _audit("content_save", f"{section}/{slug}")
+        if old_slug and old_slug != slug:
+            try:
+                store.delete_markdown(section, old_slug)
+            except ValueError:
+                pass
     except ValueError as exc:
         return RedirectResponse(ap(f"/{section}?error={exc}"), status_code=303)
     if action == "preview_raw":
         result, elapsed = build.run_preview()
         if result.returncode != 0:
-            edit_path = f"/{section}/edit" if SECTIONS[section]["single"] else f"/{section}/{slug}/edit"
             detail = (result.stderr or result.stdout or "").strip()[-200:]
-            return RedirectResponse(ap(f"{edit_path}?error=预览构建失败：{detail}"), status_code=303)
-        preview_path = f"/{section}" if SECTIONS[section]["single"] else f"/{section}/{slug}"
-        return RedirectResponse(ap(f"/preview{preview_path}?raw=1"), status_code=303)
+            return RedirectResponse(
+                ap(f"/{section}/{slug}/edit?error=预览构建失败：{detail}"),
+                status_code=303,
+            )
+        return RedirectResponse(ap(f"/preview/{section}/{slug}?raw=1"), status_code=303)
     if action == "preview":
         result, elapsed = build.run_preview()
         if result.returncode != 0:
-            edit_path = f"/{section}/edit" if SECTIONS[section]["single"] else f"/{section}/{slug}/edit"
             detail = (result.stderr or result.stdout or "").strip()[-200:]
-            return RedirectResponse(ap(f"{edit_path}?error=预览构建失败：{detail}"), status_code=303)
-        preview_path = f"/{section}" if SECTIONS[section]["single"] else f"/{section}/{slug}"
-        return RedirectResponse(ap(f"/preview{preview_path}"), status_code=303)
+            return RedirectResponse(
+                ap(f"/{section}/{slug}/edit?error=预览构建失败：{detail}"),
+                status_code=303,
+            )
+        return RedirectResponse(ap(f"/preview/{section}/{slug}"), status_code=303)
     if action == "save_stay":
         build_state.trigger_build("save_stay")
-        edit_path = f"/{section}/edit" if SECTIONS[section]["single"] else f"/{section}/{slug}/edit"
-        return RedirectResponse(ap(f"{edit_path}?ok=已保存，正在后台构建…"), status_code=303)
+        return RedirectResponse(
+            ap(f"/{section}/{slug}/edit?ok=已保存，正在后台构建…"),
+            status_code=303,
+        )
     return after_build_redirect(f"/{section}")
 
 
@@ -2600,37 +2445,10 @@ CONFIG_PAGES = {
             {"name": "footer", "label": "页脚文案", "type": "yaml", "help": "每行一个 key: 值"},
         ],
     ),
-    "homepage": (
-        "首页设置",
-        [
-            {"name": "hero.show_skills", "label": "Hero 显示技能徽章", "type": "checkbox"},
-            {"name": "hero.skills_limit", "label": "技能徽章数量", "type": "number"},
-            {"name": "journey.preview_count", "label": "历程速览条数", "type": "number"},
-            {"name": "posts.featured", "label": "精选文章（slug 逗号分隔，留空自动取最新）", "type": "csv"},
-            {"name": "posts.latest_count", "label": "最新文章条数", "type": "number"},
-            {"name": "projects.show_on_home", "label": "首页显示项目集", "type": "checkbox"},
-            {"name": "projects.max_cards", "label": "首页项目卡数量", "type": "number"},
-        ],
-    ),
     "profile": (
-        "关于我资料",
+        "作者资料",
         [
             {"name": "name", "label": "姓名", "type": "text"},
-            {"name": "identity", "label": "身份", "type": "text"},
-            {"name": "direction", "label": "方向", "type": "text"},
-            {"name": "goal", "label": "当前目标", "type": "text"},
-            {
-                "name": "skills",
-                "label": "技能徽章",
-                "type": "list",
-                "help": "每一行是一个徽章；颜色选色或填十六进制",
-                "columns": [
-                    {"key": "name", "label": "名称", "input": "text"},
-                    {"key": "color", "label": "颜色", "input": "color"},
-                    {"key": "icon", "label": "图标 slug", "input": "text"},
-                    {"key": "href", "label": "链接", "input": "text"},
-                ],
-            },
             {
                 "name": "links",
                 "label": "外部链接",

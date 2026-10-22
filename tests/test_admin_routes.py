@@ -32,7 +32,6 @@ class AdminRoutesTest(unittest.TestCase):
         settings.ip_whitelist = []
         media.MEDIA_ROOT = root / "img"
         (settings.content_root / "posts").mkdir(parents=True)
-        (settings.content_root / "projects").mkdir(parents=True)
         settings.config_root.mkdir(parents=True)
         settings.preview_root.mkdir(parents=True)
         media.MEDIA_ROOT.mkdir(parents=True)
@@ -41,7 +40,7 @@ class AdminRoutesTest(unittest.TestCase):
         )
         init_db()
         conn = connect()
-        create_admin(conn, "admin", security.hash_password("Li&Blog@2026"))
+        create_admin(conn, "admin", security.hash_password("Li&Notes@2026"))
         conn.commit()
         conn.close()
 
@@ -53,7 +52,7 @@ class AdminRoutesTest(unittest.TestCase):
         csrf0 = re.search(r'name="_csrf" value="([^"]+)"', r.text).group(1)
         client.post(
             "/admin/login",
-            data={"username": "admin", "password": "Li&Blog@2026", "_csrf": csrf0},
+            data={"username": "admin", "password": "Li&Notes@2026", "_csrf": csrf0},
             follow_redirects=False,
         )
         r = client.get("/admin/")
@@ -315,18 +314,15 @@ class AdminRoutesTest(unittest.TestCase):
             self.assertIn("form[data-confirm]", r.text)
             self.assertNotIn('onsubmit="return confirm', r.text)
 
-    def test_project_save_preserves_unknown_fields(self):
+    def test_post_save_preserves_unknown_fields(self):
         store.write_markdown(
-            "projects",
-            "proj",
+            "posts",
+            "note",
             {
-                "title": "P",
+                "title": "N",
                 "date": "2026-08-18",
-                "status": "active",
-                "tech": [],
+                "status": "published",
                 "summary": "s",
-                "badge": {"label": "B"},
-                "show_on_home": False,
                 "cover": "/img/x.png",
                 "custom_field": "保留我",
             },
@@ -338,30 +334,43 @@ class AdminRoutesTest(unittest.TestCase):
         with TestClient(app) as client:
             csrf = self._login(client)
             client.post(
-                "/admin/projects/save",
+                "/admin/posts/save",
                 data={
                     "_csrf": csrf,
-                    "slug": "proj",
+                    "slug": "note",
                     "new_slug": "",
                     "action": "save_stay",
-                    "title": "P2",
+                    "title": "N2",
                     "date": "2026-08-18",
-                    "status": "active",
-                    "repo": "",
-                    "tech": "Docker",
+                    "status": "published",
                     "summary": "s2",
-                    "badge_label": "B",
-                    "badge_color": "",
-                    "badge_href": "",
+                    "cover": "/img/x.png",
                     "body": "正文",
                 },
                 follow_redirects=False,
             )
-        fm, _ = store.read_markdown("projects", "proj")
+        fm, _ = store.read_markdown("posts", "note")
         self.assertEqual(fm["cover"], "/img/x.png")
         self.assertEqual(fm["custom_field"], "保留我")
-        self.assertFalse(fm["show_on_home"])
-        self.assertEqual(fm["tech"], ["Docker"])
+        self.assertEqual(fm["title"], "N2")
+
+    def test_removed_blog_sections_return_404(self):
+        with TestClient(app) as client:
+            self._login(client)
+            for path in (
+                "/admin/projects",
+                "/admin/timeline",
+                "/admin/about",
+                "/admin/resources",
+                "/admin/friends",
+            ):
+                r = client.get(path, follow_redirects=False)
+                self.assertEqual(r.status_code, 404, path)
+            r = client.get("/admin/")
+            self.assertEqual(r.status_code, 200)
+            self.assertNotIn(">项目<", r.text)
+            self.assertNotIn(">时间线<", r.text)
+            self.assertNotIn("友情链接", r.text)
 
     def test_trash_restore_cycle(self):
         store.write_markdown(
@@ -743,22 +752,20 @@ class AdminRoutesTest(unittest.TestCase):
             location = urllib.parse.unquote(r.headers.get("location", ""))
             self.assertIn("不可写", location)
 
-    def test_profile_form_uses_row_indexed_input_names(self):
+    def test_profile_form_uses_row_indexed_link_inputs(self):
         (settings.config_root / "profile.yaml").write_text(
             "name: T\n"
-            "skills:\n"
-            "- name: A\n  icon: a\n"
-            "- name: B\n  icon: b\n",
+            "links:\n"
+            "- label: GitHub\n  href: https://github.com/example\n",
             encoding="utf-8",
         )
         with TestClient(app) as client:
             self._login(client)
             r = client.get("/admin/config/profile")
             self.assertEqual(r.status_code, 200)
-            self.assertIn('name="skills[0][name]"', r.text)
-            self.assertIn('name="skills[1][name]"', r.text)
-            self.assertIn('name="skills[0][icon]"', r.text)
-            self.assertNotIn('name="skills[2][name]"', r.text)
+            self.assertIn('name="links[0][label]"', r.text)
+            self.assertIn('name="links[0][href]"', r.text)
+            self.assertNotIn('name="links[1][label]"', r.text)
 
     def test_rewrite_preview_html_rewrites_assets(self):
         html = (
@@ -774,92 +781,6 @@ class AdminRoutesTest(unittest.TestCase):
         self.assertIn("url('/admin/preview-out/img/b.png')", out)
 
 
-    def test_friends_admin_list_and_edit_fields(self):
-        store.write_markdown(
-            "friends",
-            "example",
-            {
-                "title": "示例站",
-                "href": "https://example.com/",
-                "description": "一个示例站点",
-                "weight": 2,
-            },
-            "",
-        )
-        with TestClient(app) as client:
-            self._login(client)
-            r = client.get("/admin/friends")
-            self.assertEqual(r.status_code, 200)
-            self.assertIn("友情链接", r.text)
-            self.assertIn("https://example.com/", r.text)
-            self.assertIn("/admin/friends/new", r.text)
-            r = client.get("/admin/friends/example/edit")
-            self.assertEqual(r.status_code, 200)
-            self.assertIn('name="href"', r.text)
-            self.assertIn('name="weight"', r.text)
-
-    def test_friends_save_validates_url(self):
-        original = build.run_full
-        build.run_full = lambda: (types.SimpleNamespace(returncode=0, stderr=""), 0.01)
-        self.addCleanup(setattr, build, "run_full", original)
-        with TestClient(app) as client:
-            csrf = self._login(client)
-            r = client.post(
-                "/admin/friends/save",
-                data={
-                    "_csrf": csrf,
-                    "slug": "",
-                    "new_slug": "bad-link",
-                    "action": "save",
-                    "title": "坏链接",
-                    "href": "javascript:alert(1)",
-                    "description": "",
-                    "weight": "1",
-                    "body": "",
-                },
-                follow_redirects=False,
-            )
-            self.assertEqual(r.status_code, 303)
-            self.assertFalse((settings.content_root / "friends" / "bad-link.md").exists())
-            r = client.post(
-                "/admin/friends/save",
-                data={
-                    "_csrf": csrf,
-                    "slug": "",
-                    "new_slug": "good-link",
-                    "action": "save",
-                    "title": "好链接",
-                    "href": "https://example.com/",
-                    "description": "简介",
-                    "weight": "1",
-                    "body": "",
-                },
-                follow_redirects=False,
-            )
-            self.assertEqual(r.status_code, 303)
-            fm, _ = store.read_markdown("friends", "good-link")
-            self.assertEqual(fm["href"], "https://example.com/")
-            self.assertEqual(fm["weight"], 1)
-
-    def test_friends_delete_removes_file(self):
-        store.write_markdown(
-            "friends",
-            "gone",
-            {"title": "待删除", "href": "https://example.com/", "weight": 1},
-            "",
-        )
-        original = build.run_full
-        build.run_full = lambda: (types.SimpleNamespace(returncode=0, stderr=""), 0.01)
-        self.addCleanup(setattr, build, "run_full", original)
-        with TestClient(app) as client:
-            csrf = self._login(client)
-            r = client.post(
-                "/admin/friends/gone/delete",
-                data={"_csrf": csrf},
-                follow_redirects=False,
-            )
-            self.assertEqual(r.status_code, 303)
-            self.assertFalse((settings.content_root / "friends" / "gone.md").exists())
 
 if __name__ == "__main__":
     unittest.main()

@@ -51,7 +51,7 @@ class TestRestore(unittest.TestCase):
             "AAA", encoding="utf-8"
         )
         (settings.config_root / "brand.yaml").write_text(
-            "name: Li&Blog\n", encoding="utf-8"
+            "name: Li&Notes\n", encoding="utf-8"
         )
         (media.MEDIA_ROOT / "x.png").write_bytes(b"img")
 

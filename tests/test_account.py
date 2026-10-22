@@ -25,7 +25,6 @@ class AccountRoutesTest(unittest.TestCase):
         settings.ip_whitelist = []
         media.MEDIA_ROOT = root / "img"
         (settings.content_root / "posts").mkdir(parents=True)
-        (settings.content_root / "projects").mkdir(parents=True)
         settings.config_root.mkdir(parents=True)
         settings.preview_root.mkdir(parents=True)
         media.MEDIA_ROOT.mkdir(parents=True)
@@ -34,7 +33,7 @@ class AccountRoutesTest(unittest.TestCase):
         )
         init_db()
         conn = connect()
-        create_admin(conn, "admin", security.hash_password("Li&Blog@2026"))
+        create_admin(conn, "admin", security.hash_password("Li&Notes@2026"))
         conn.commit()
         conn.close()
 
@@ -46,7 +45,7 @@ class AccountRoutesTest(unittest.TestCase):
         csrf0 = re.search(r'name="_csrf" value="([^"]+)"', r.text).group(1)
         client.post(
             "/admin/login",
-            data={"username": "admin", "password": "Li&Blog@2026", "_csrf": csrf0},
+            data={"username": "admin", "password": "Li&Notes@2026", "_csrf": csrf0},
             follow_redirects=False,
         )
         r = client.get("/admin/settings/account")
@@ -59,7 +58,7 @@ class AccountRoutesTest(unittest.TestCase):
                 "/admin/settings/account",
                 data={
                     "_csrf": csrf,
-                    "current_password": "Li&Blog@2026",
+                    "current_password": "Li&Notes@2026",
                     "new_username": "newadmin",
                     "new_password": "NewPass@2026",
                     "confirm": "NewPass@2026",
