@@ -11,6 +11,10 @@ Li&Notes 是个人学习笔记站，负责完整 Markdown 笔记的写作、归�
 - 微信小程序“知识速查”只消费从笔记中整理出的结构化速查数据，不镜像文章正文。
 - 跨端方案见 `docs/superpowers/specs/2026-10-23-notes-knowledge-coexistence.md`。
 
+## 使用方法
+
+完整操作流程见 [docs/USAGE.md](docs/USAGE.md)：启动、后台写作、小程序速查配置、构建发布、热更新、备案信息和故障排查。
+
 ## 技术栈
 
 - Hugo 0.165.0：Markdown 构建期渲染、Chroma 高亮、搜索索引。
