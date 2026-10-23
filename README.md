@@ -85,8 +85,9 @@ docker compose --profile admin up -d
 
 - `manifest.json`
 - `<contentVersion>.json`
+- 构建保留当前与上一版本 JSON，避免客户端刚读取旧 manifest 后遇到数据文件 404。
 
-小程序只消费该结构化数据，不镜像文章正文。分类名称、匹配关键词、自动刮削语言和数量限制在后台“知识速查”中维护；所有后台改动均原子写入 YAML/Markdown。
+`manifest.json` 由 Nginx 设置为 `no-store`，版本化 JSON 使用一年 `immutable` 缓存。小程序只消费该结构化数据，不镜像文章正文。分类名称、匹配关键词、自动刮削语言和数量限制在后台“知识速查”中维护；所有后台改动均原子写入 YAML/Markdown。
 
 ## 验证（推荐 Docker）
 
@@ -101,6 +102,14 @@ docker compose --profile admin run --rm admin python scripts/build.py --full
 ```
 
 宿主机不安装 Hugo、Python 依赖或前端工具链。仅在 Docker 不可用时，才使用与 `requirements.txt` 一致的本地 Python 环境。
+宿主机不安装 Hugo、Python 依赖或前端工具链。仅在 Docker 不可用时，才使用与 `requirements.txt` 一致的本地 Python 环境。
+
+安全基线：
+
+- 文章正文在保存、批量导入和构建前都会扫描危险原始 HTML；代码围栏中的示例不受影响。
+- 依赖使用 `requirements.txt` + `requirements.lock` 双层锁定；发布前对完整锁文件执行 `pip-audit`。
+- `COOKIE_SECURE=1` 时，首次建站必须配置 `SETUP_TOKEN`，否则应用拒绝启动。
+- 安全测试报告见 `docs/security/2026-10-23-security-test.md`。
 
 ## 目录
 

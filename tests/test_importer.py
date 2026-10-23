@@ -67,6 +67,13 @@ class TestImporter(unittest.TestCase):
         self.assertEqual(len(result["errors"]), 1)
         self.assertIn("缺少文件名", result["errors"][0])
 
+    def test_import_rejects_stored_xss_payload(self):
+        payload = "---\ntitle: XSS\n---\n\n<img src=x onerror=alert(1)>\n"
+        result = importer.import_posts([("xss.md", payload.encode("utf-8"))])
+        self.assertEqual(result["imported"], 0)
+        self.assertIn("不安全 HTML", result["errors"][0])
+        self.assertFalse((settings.content_root / "posts" / "xss.md").exists())
+
     def test_import_rejects_empty_file(self):
         result = importer.import_posts([("untitled.md", b"")])
         self.assertEqual(result["imported"], 0)

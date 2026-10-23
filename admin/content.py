@@ -1,5 +1,6 @@
 """内容读写层：Markdown/YAML 文件是唯一事实来源，路径一律防穿越。"""
 
+import html
 import os
 import re
 import shutil
@@ -30,6 +31,18 @@ IMAGE_REF_PATTERNS = (
 _DANGEROUS_SVG_RE = re.compile(
     r"(<script|javascript:|data:\s*text/html|on[a-z]+\s*=)", re.IGNORECASE
 )
+_UNSAFE_HTML_TAG_RE = re.compile(
+    r"<\s*(script|iframe|object|embed|form|base|meta|link|style|template|math|svg)\b",
+    re.IGNORECASE,
+)
+_UNSAFE_HTML_EVENT_RE = re.compile(r"\son[a-z][a-z0-9_:-]*\s*=", re.IGNORECASE)
+_UNSAFE_HTML_URL_RE = re.compile(
+    r"(?:href|src|srcset|poster|action|formaction)=[\"']?"
+    r"(?:javascript|vbscript|data):",
+    re.IGNORECASE,
+)
+_UNSAFE_HTML_SRCDOC_RE = re.compile(r"\bsrcdoc\s*=", re.IGNORECASE)
+_UNSAFE_HTML_STYLE_RE = re.compile(r"\sstyle\s*=", re.IGNORECASE)
 _FRONTMATTER_RE = re.compile(
     r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)",
     re.DOTALL,
@@ -47,6 +60,45 @@ def sanitize_inline_svg(value: str) -> str:
     if _DANGEROUS_SVG_RE.search(cleaned):
         return ""
     return cleaned
+
+
+def scan_markdown_security(body: str) -> list[str]:
+    """扫描 Markdown 中会被 Hugo 原样输出的危险 HTML；忽略代码围栏与行内代码。"""
+    errors: list[str] = []
+    fence_char = ""
+    visible_lines: list[str] = []
+    for line_no, line in enumerate(str(body or "").splitlines(), 1):
+        fence = re.match(r"^\s{0,3}(`{3,}|~{3,})", line)
+        if fence:
+            marker = fence.group(1)
+            if not fence_char:
+                fence_char = marker[0]
+            elif marker[0] == fence_char:
+                fence_char = ""
+            continue
+        if fence_char:
+            continue
+        visible = re.sub(r"(`+)(.*?)\1", "", line)
+        visible_lines.append(visible)
+        decoded = html.unescape(visible)
+        tag = _UNSAFE_HTML_TAG_RE.search(decoded)
+        if tag:
+            errors.append(f"第 {line_no} 行禁止原始 HTML 标签 <{tag.group(1).lower()}>")
+        event = _UNSAFE_HTML_EVENT_RE.search(decoded)
+        if event:
+            errors.append(f"第 {line_no} 行禁止内联事件属性 {event.group(0).strip()}")
+        if _UNSAFE_HTML_SRCDOC_RE.search(decoded):
+            errors.append(f"第 {line_no} 行禁止 srcdoc 属性")
+        if _UNSAFE_HTML_STYLE_RE.search(decoded):
+            errors.append(f"第 {line_no} 行禁止内联 style 属性")
+    combined = re.sub(
+        r"[\x00-\x20]+",
+        "",
+        html.unescape("\n".join(visible_lines)),
+    )
+    if _UNSAFE_HTML_URL_RE.search(combined):
+        errors.append("禁止 javascript/data/vbscript URL")
+    return errors
 
 
 def split_frontmatter(text: str) -> tuple[str, str]:

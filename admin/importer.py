@@ -30,6 +30,9 @@ def parse_document(filename: str, text: str) -> tuple[str, dict, str]:
         fm, body = {}, text
     if not isinstance(fm, dict):
         raise ValueError(f"{filename}: frontmatter 必须是键值对")
+    security_errors = content.scan_markdown_security(body)
+    if security_errors:
+        raise ValueError(f"{filename}: 正文包含不安全 HTML：{security_errors[0]}")
     explicit = str(fm.pop("slug", "")).strip("/")
     stem = PurePosixPath(filename).stem
     slug = _resolve_slug(explicit, stem, fm.get("title", ""), filename)
@@ -56,7 +59,7 @@ def _resolve_slug(explicit: str, stem: str, title: str, filename: str) -> str:
         candidate = _slugify(source)
         if content.SLUG_RE.match(candidate):
             return candidate
-    digest = hashlib.md5(filename.encode("utf-8")).hexdigest()[:10]
+    digest = hashlib.sha256(filename.encode("utf-8")).hexdigest()[:10]
     return f"post-{digest}"
 
 

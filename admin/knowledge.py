@@ -940,17 +940,32 @@ def export_bundle(
     manifest, _payload, data_text = build_bundle(root, base_url=base_url, now=now)
     knowledge_dir = output_root / "knowledge"
     knowledge_dir.mkdir(parents=True, exist_ok=True)
+    previous_data_name = ""
+    manifest_path = knowledge_dir / "manifest.json"
+    if manifest_path.exists():
+        try:
+            previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            previous_url = str(previous_manifest.get("dataUrl") or "")
+            if previous_url.startswith("/knowledge/"):
+                candidate = Path(previous_url).name
+                if candidate != "manifest.json" and (knowledge_dir / candidate).is_file():
+                    previous_data_name = candidate
+        except (OSError, ValueError, TypeError, UnicodeDecodeError):
+            previous_data_name = ""
     data_path = output_root / manifest["dataUrl"].lstrip("/")
     data_path.parent.mkdir(parents=True, exist_ok=True)
     data_tmp = data_path.with_name(data_path.name + ".tmp")
     data_tmp.write_text(data_text, encoding="utf-8")
     data_tmp.replace(data_path)
     manifest_text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
-    manifest_path = knowledge_dir / "manifest.json"
     manifest_tmp = manifest_path.with_name("manifest.json.tmp")
     manifest_tmp.write_text(manifest_text, encoding="utf-8")
     manifest_tmp.replace(manifest_path)
+    # 保留当前与上一版本，避免客户端刚取到旧 manifest 后遇到版本文件 404。
+    keep = {"manifest.json", data_path.name}
+    if previous_data_name:
+        keep.add(previous_data_name)
     for stale in knowledge_dir.glob("*.json"):
-        if stale.name not in ("manifest.json", data_path.name):
+        if stale.name not in keep:
             stale.unlink()
     return {**manifest, "manifestPath": str(manifest_path), "dataPath": str(data_path)}

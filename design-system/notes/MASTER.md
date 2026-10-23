@@ -1,6 +1,6 @@
 # Li&Notes 实现速览
 
-> 版本：v2.3 ｜ 日期：2026-10-23 ｜ 技术栈：Hugo + FastAPI + SQLite + Nginx
+> 版本：v2.6 ｜ 日期：2026-10-23 ｜ 技术栈：Hugo + FastAPI + SQLite + Nginx
 
 ## 1. 结构
 
@@ -102,6 +102,10 @@ HUGO_BIN=/path/to/hugo-0.165.0 python scripts/build.py --full
 3. 自动刮削只处理 `published` 且非未来文章；手写 `mini_json` 与显式 `enabled: false` 优先。
 4. 命令表优先按行抽取；无命令表时从允许语言的代码块生成一篇一条的速查候选。
 5. 候选先预览，确认后写回文章 frontmatter；配置和 Markdown 均使用临时文件、`fsync` 与 `os.replace` 原子持久化。
+6. 小程序热更新先校验证书/同源/体积/schema/引用/Hash，再替换缓存；缓存持久化 contentVersion 与 SHA-256，启动时复核。
+7. 自动检查并发请求合并为单一 in-flight；成功后节流 5 分钟，失败后 60 秒可重试，手动检查绕过节流。
+8. 自动检查按 `generatedAt` 防止远端旧包静默降级；手动检查保留强制回滚能力。
+9. 构建保留当前与上一版本 knowledge JSON；Nginx 对 manifest 返回 `no-store`，对版本 JSON 返回一年 `immutable`。
 
 ## 10. 响应式排版契约
 
@@ -111,3 +115,21 @@ HUGO_BIN=/path/to/hugo-0.165.0 python scripts/build.py --full
 - 后台文章/配置/同步表格使用 `table-shell--cards`；移动端配置字段纵向排列，操作按钮可换行，长标题禁止省略号截断。
 - 登录页在 ≤820px 将页脚移出绝对定位，≤480px 隐藏装饰侧栏并显示紧凑品牌行，保证主按钮不被覆盖。
 - 验收矩阵：公开站 320/360/390/768/1024/1280/1440；后台 320/360/390/768/1024/1280/1281/1366/1440。
+
+## 11. 视觉质感层
+
+- 颜色、字体栈、纸页表面、细线、网格、光环和阴影均定义在 `themes/blog-theme/static/css/tokens.css`；`style.css` 末尾的“知识档案质感层”只消费令牌。
+- 新增 `--liblog-font-display`、`--liblog-font-reading`、`--liblog-font-label`，全部使用本地字体回退，不请求远程字体。
+- 首页使用档案式大标题、统计刻度条与编号笔记卡；列表/归档继承同一细线和标签语法。
+- 文章页使用衬线阅读正文、纸页式目录、编号示例与结构化代码表面；≤1120px 继续折叠目录，≤640px 隐藏卡片编号并压缩留白。
+- 交互层只做轻微抬升、边框主色化与阴影变化，继续遵守 `prefers-reduced-motion`；320px 无横向溢出的响应式契约不变。
+- 小程序共享表面、网格、字号与徽记语法，但采用“随身速查卡”组件：分类单字徽记、命令块、示例编号和搜索聚焦光环。
+
+## 12. 安全基线
+
+- 后台会话 Cookie 使用 `HttpOnly`、`SameSite=Lax`，路径限定到 `/<ADMIN_PATH>`；OIDC state Cookie 同样限定路径。
+- `COOKIE_SECURE=1` 的 HTTPS 首次建站必须配置 `SETUP_TOKEN`，否则启动失败，防止公开实例被抢占。
+- Markdown 正文在保存、导入与构建前扫描危险原始 HTML；脚本、iframe/object/embed/form/svg/style、内联事件、inline style、srcdoc 与危险 URL 均被拒绝，代码围栏示例除外。
+- Nginx 覆盖客户端 `X-Forwarded-For`，登录限速和 IP 白名单只信任边缘代理写入的真实来源。
+- 运行期 UID 1000、只读根文件系统、无 Docker socket；后台响应统一 `no-store`、`noindex` 与 CSP。
+- 依赖精确锁定；发布前运行 `pip-audit` 与 Bandit，生产 TLS、真实 `SETUP_TOKEN` 和 OS 镜像 CVE 扫描仍需部署验收。

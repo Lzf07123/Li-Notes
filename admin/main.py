@@ -6,6 +6,7 @@ import os
 import re
 from contextlib import asynccontextmanager
 from math import ceil
+from pathlib import Path
 from typing import Optional
 from urllib.parse import unquote, urlencode
 
@@ -77,9 +78,26 @@ def _bootstrap_build() -> None:
         print(f"[build] 启动引导构建失败：{tail}{hint}")
 
 
+def validate_initial_setup_security() -> None:
+    """HTTPS 首次建站必须配置 SETUP_TOKEN，防止公开实例被抢占。"""
+    if not settings.cookie_secure or settings.setup_token:
+        return
+    conn = connect()
+    try:
+        admin = get_admin(conn)
+    finally:
+        conn.close()
+    if admin is None:
+        raise RuntimeError(
+            "COOKIE_SECURE=1 时首次建站必须设置 SETUP_TOKEN；"
+            "请配置后重启，避免公开实例被抢占"
+        )
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+    validate_initial_setup_security()
     imported = import_beacon_log()
     if imported:
         print(f"[beacon] imported {imported} hits")
@@ -95,6 +113,7 @@ app.add_middleware(
     max_age=3600,
     same_site="lax",
     https_only=settings.cookie_secure,
+    path=settings.admin_cookie_path,
 )
 
 
@@ -338,6 +357,7 @@ def attach_session_cookie(response, session_id: str) -> None:
         samesite="lax",
         secure=settings.cookie_secure,
         max_age=settings.session_ttl,
+        path=settings.admin_cookie_path,
     )
 
 
@@ -419,14 +439,14 @@ def has_admin_account() -> bool:
         conn.close()
 
 
-def setup_token_ok(request: Request, form_token: str = "") -> bool:
+def setup_token_ok(request: Request, form_token: Optional[str] = None) -> bool:
     """首次建站保护：配置 SETUP_TOKEN 后，setup 路由必须提供匹配令牌。
 
     令牌支持 X-Setup-Token 请求头或表单字段 setup_token（常量时间比较）。
     """
     if not settings.setup_token:
         return True
-    given = request.headers.get("x-setup-token", "") or form_token
+    given = request.headers.get("x-setup-token", "") or (form_token or "")
     return security.check_token(settings.setup_token, given)
 
 
@@ -526,6 +546,7 @@ def login_submit(
     response.set_cookie(
         COOKIE, session_id, httponly=True, samesite="lax",
         secure=settings.cookie_secure, max_age=settings.session_ttl,
+        path=settings.admin_cookie_path,
     )
     return response
 
@@ -544,7 +565,7 @@ def logout(request: Request, csrf_token: str = Form("", alias="_csrf")):
     if sess:
         delete_session(sess["id"])
     response = RedirectResponse(ap("/login"), status_code=302)
-    response.delete_cookie(COOKIE)
+    response.delete_cookie(COOKIE, path=settings.admin_cookie_path)
     return response
 
 
@@ -575,6 +596,7 @@ async def oidc_callback(request: Request):
     response.set_cookie(
         COOKIE, session_id, httponly=True, samesite="lax",
         secure=settings.cookie_secure, max_age=settings.session_ttl,
+        path=settings.admin_cookie_path,
     )
     return response
 
@@ -726,6 +748,7 @@ def setup_account_submit(
     response.set_cookie(
         COOKIE, session_id, httponly=True, samesite="lax",
         secure=settings.cookie_secure, max_age=settings.session_ttl,
+        path=settings.admin_cookie_path,
     )
     return response
 
@@ -923,20 +946,20 @@ def stats_page(
         params.append(end)
     if group == "month":
         sql = (
-            f"SELECT strftime('%Y-%m', day) AS period, SUM(views) AS total, "
-            f"COUNT(DISTINCT path) AS paths FROM stats {filters}"
-        )
+            "SELECT strftime('%Y-%m', day) AS period, SUM(views) AS total, "  # nosec B608
+            "COUNT(DISTINCT path) AS paths FROM stats "
+        ) + filters
     elif group == "year":
         sql = (
-            f"SELECT strftime('%Y', day) AS period, SUM(views) AS total, "
-            f"COUNT(DISTINCT path) AS paths FROM stats {filters}"
-        )
+            "SELECT strftime('%Y', day) AS period, SUM(views) AS total, "  # nosec B608
+            "COUNT(DISTINCT path) AS paths FROM stats "
+        ) + filters
     else:
         # 按路径聚合：同一条路径跨多天只显示一行，日期取最近一次访问。
         sql = (
-            f"SELECT path, MAX(day) AS day, SUM(views) AS views "
-            f"FROM stats {filters} GROUP BY path"
-        )
+            "SELECT path, MAX(day) AS day, SUM(views) AS views "  # nosec B608
+            "FROM stats "
+        ) + filters + " GROUP BY path"
     if group in ("month", "year"):
         sql += " GROUP BY period ORDER BY period DESC LIMIT ?"
         params.append(min(max(int(limit), 10), 1000))
@@ -948,7 +971,7 @@ def stats_page(
     # 独立路径必须全局去重；按周期汇总时不能把同一路径跨周期重复相加。
     unique_params = list(params)
     if group in ("month", "year"):
-        unique_sql = f"SELECT COUNT(DISTINCT path) AS total FROM stats {filters}"
+        unique_sql = "SELECT COUNT(DISTINCT path) AS total FROM stats " + filters  # nosec B608
         # 周期 SQL 的 LIMIT 参数不适用于全局去重查询，去掉末尾参数。
         unique_params = params[:-1] if params else []
         unique_paths = conn.execute(unique_sql, unique_params).fetchone()["total"]
@@ -1073,14 +1096,32 @@ def _knowledge_manifest_status() -> dict:
         return status
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        data_path = settings.output_root / str(manifest.get("dataUrl") or "").lstrip("/")
+        raw_url = str(manifest.get("dataUrl") or "")
+        if not raw_url.startswith("/knowledge/"):
+            raise ValueError("manifest.dataUrl 必须位于 /knowledge/")
+        knowledge_dir = (settings.output_root / "knowledge").resolve()
+        data_path = (settings.output_root / raw_url.lstrip("/")).resolve()
+        if data_path.parent != knowledge_dir or data_path.name == "manifest.json":
+            raise ValueError("manifest.dataUrl 越界")
         payload = json.loads(data_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("knowledge payload 必须是对象")
+        if payload.get("schemaVersion") != manifest.get("schemaVersion"):
+            raise ValueError("schemaVersion 与 manifest 不一致")
+        if payload.get("contentVersion") != manifest.get("contentVersion"):
+            raise ValueError("contentVersion 与 manifest 不一致")
+        items = payload.get("items")
+        if not isinstance(items, list):
+            raise ValueError("payload.items 必须是数组")
+        count = int(manifest.get("count") or 0)
+        if count != len(items):
+            raise ValueError("count 与 payload.items 长度不一致")
         if knowledge_store.payload_digest(payload) != manifest.get("sha256"):
             raise ValueError("payload 哈希与 manifest 不一致")
         status.update(
             {
                 "valid": True,
-                "count": int(manifest.get("count") or 0),
+                "count": count,
                 "version": str(manifest.get("contentVersion") or ""),
             }
         )
@@ -1521,12 +1562,17 @@ def logs_page(request: Request, kind: str = "", page: int = 1):
     if kind:
         where = " WHERE kind = ?"
         params.append(kind)
-    total = conn.execute(f"SELECT COUNT(*) AS n FROM audit_log{where}", params).fetchone()["n"]
+    # where 只追加固定的占位符子句，用户值始终通过 params 绑定。
+    total = conn.execute(
+        "SELECT COUNT(*) AS n FROM audit_log" + where, params  # nosec B608
+    ).fetchone()["n"]
     pages = max(1, ceil(total / per_page))
     page = min(max(1, page), pages)
     offset = (page - 1) * per_page
     rows = conn.execute(
-        f"SELECT at, kind, detail, ip FROM audit_log{where} ORDER BY id DESC LIMIT ? OFFSET ?",
+        "SELECT at, kind, detail, ip FROM audit_log"  # nosec B608
+        + where
+        + " ORDER BY id DESC LIMIT ? OFFSET ?",
         params + [per_page, offset],
     ).fetchall()
     conn.close()
@@ -2466,6 +2512,9 @@ def section_save(
             mini_raw = json.loads(mini_config) if mini_config.strip() else {}
         except json.JSONDecodeError as exc:
             raise ValueError(f"小程序同步配置 JSON 格式错误：{exc}") from exc
+        security_errors = store.scan_markdown_security(body)
+        if security_errors:
+            raise ValueError(f"正文包含不安全 HTML：{security_errors[0]}")
         mini_norm = knowledge_store.validate_mini_config(mini_raw, slug, tag_list)
         if mini_norm.get("enabled"):
             fm["mini_json"] = json.dumps(mini_norm, ensure_ascii=False, indent=2)

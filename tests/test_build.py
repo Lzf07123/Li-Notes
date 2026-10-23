@@ -71,6 +71,17 @@ class TestBuild(unittest.TestCase):
             self.assertFalse(any("https://example.com" in e for e in errors))
             self.assertFalse(any("/posts/hello/" in e for e in errors))
 
+    def test_validate_content_rejects_unsafe_raw_html(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "content" / "posts").mkdir(parents=True)
+            (root / "content" / "posts" / "xss.md").write_text(
+                "---\ntitle: xss\n---\n\n<script>alert(1)</script>\n",
+                encoding="utf-8",
+            )
+            errors = validate_content(root)
+        self.assertTrue(any("禁止原始 HTML 标签 <script>" in item for item in errors))
+
     def test_verify_output_detects_missing_and_placeholder(self):
         with tempfile.TemporaryDirectory() as d:
             out = pathlib.Path(d)

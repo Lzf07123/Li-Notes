@@ -23,10 +23,10 @@ RUN cd /usr/local/bin \
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -i "${PIP_INDEX_URL}" -r /tmp/requirements.txt \
+COPY requirements.lock /tmp/requirements.lock
+RUN pip install --no-cache-dir -i "${PIP_INDEX_URL}" -r /tmp/requirements.lock \
     && pip check \
-    && rm -f /tmp/requirements.txt
+    && rm -f /tmp/requirements.lock
 
 FROM ${DOCKER_MIRROR_PREFIX}python:3.12-slim AS runtime
 
@@ -58,7 +58,7 @@ COPY --chown=app:app scripts/ scripts/
 COPY --chown=app:app themes/ themes/
 COPY --chown=app:app config/ config/
 COPY --chown=app:app content/ content/
-COPY --chown=app:app hugo.toml requirements.txt ./
+COPY --chown=app:app hugo.toml requirements.txt requirements.lock ./
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from admin import media, security
 from admin.config import settings
 from admin.db import connect, create_admin, get_admin, init_db
-from admin.main import app
+from admin.main import app, validate_initial_setup_security
 
 
 class SetupSecurityBase(unittest.TestCase):
@@ -110,6 +110,30 @@ class SetupBasicGuardTest(SetupSecurityBase):
         brand = (settings.config_root / "brand.yaml").read_text(encoding="utf-8")
         self.assertNotIn("HACKED", brand)
         self.assertIn("Audit", brand)
+
+
+class SecureDeploymentSetupTest(SetupSecurityBase):
+    def test_https_first_setup_requires_setup_token(self):
+        original = settings.cookie_secure
+        settings.cookie_secure = True
+        try:
+            with self.assertRaisesRegex(RuntimeError, "SETUP_TOKEN"):
+                validate_initial_setup_security()
+            settings.setup_token = "secure-setup-token"
+            validate_initial_setup_security()
+        finally:
+            settings.cookie_secure = original
+
+    def test_existing_admin_allows_secure_start_without_setup_token(self):
+        conn = connect()
+        create_admin(conn, "admin", security.hash_password("Li&Notes@2026"))
+        conn.close()
+        original = settings.cookie_secure
+        settings.cookie_secure = True
+        try:
+            validate_initial_setup_security()
+        finally:
+            settings.cookie_secure = original
 
 
 class SetupTokenTest(SetupSecurityBase):

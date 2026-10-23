@@ -196,6 +196,32 @@ class TestContent(unittest.TestCase):
         self.assertTrue(by_slug["pinned-post"]["pinned"])
         self.assertFalse(by_slug["normal-post"]["pinned"])
 
+    def test_markdown_security_rejects_stored_xss_vectors(self):
+        vectors = (
+            "<script>alert(1)</script>",
+            '<img src="x" onerror="alert(1)">',
+            '<a href="javascript:alert(1)">x</a>',
+            '<a href="javas&#99;ript:alert(1)">x</a>',
+            '<a href="java\nscript:alert(1)">x</a>',
+            '<iframe srcdoc="<script>alert(1)</script>"></iframe>',
+            '<svg><a xlink:href="javascript:alert(1)">x</a></svg>',
+            '<div style="position:fixed;inset:0">覆盖</div>',
+        )
+        for value in vectors:
+            with self.subTest(value=value):
+                self.assertTrue(content.scan_markdown_security(value))
+
+    def test_markdown_security_ignores_code_and_allows_safe_html(self):
+        safe = (
+            "```html\n"
+            "<script>alert('documentation')</script>\n"
+            "```\n\n"
+            "`<img src=x onerror=alert(1)>`\n\n"
+            "``<script>alert('inline')</script>``\n\n"
+            '<details><summary>展开</summary><img src="/img/a.png" alt="x"></details>'
+        )
+        self.assertEqual(content.scan_markdown_security(safe), [])
+
     def test_sanitize_inline_svg_removes_script_and_events(self):
         safe = '<svg viewBox="0 0 24 24"><path d="M0 0"/></svg>'
         self.assertEqual(content.sanitize_inline_svg(safe), safe)
