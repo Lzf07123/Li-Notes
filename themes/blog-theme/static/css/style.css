@@ -285,6 +285,9 @@ main:focus { outline: none; }
 /* 页脚组件类（Li&Panel SiteFooter 同款）：布局/配色由 Tailwind utility 承担 */
 @layer components {
   .beian-link { display: inline-flex; align-items: center; }
+  .site-footer-inner { justify-content: center; }
+  .site-footer-filings { justify-content: center; }
+  .beian-item { max-width: 100%; }
   .beian-icon {
     display: inline-flex;
     align-items: center;
@@ -319,6 +322,58 @@ main:focus { outline: none; }
   .filing-icon-placeholder[hidden] { display: none !important; }
   .beian-link:hover .beian-icon { color: var(--liblog-primary); }
   .beian-text { white-space: nowrap; }
+  .beian-number { font-variant-numeric: tabular-nums; }
+}
+
+@media (max-width: 480px) {
+  .site-footer-inner {
+    flex-direction: column;
+    gap: 0;
+    padding-block: 4px;
+  }
+  .site-footer-copyright {
+    width: 100%;
+    text-align: center;
+  }
+  .site-footer-filings {
+    display: grid;
+    width: 100%;
+    gap: 0;
+  }
+  .beian-item {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+  }
+  .beian-link {
+    display: flex;
+    width: 100%;
+    min-height: 24px;
+    justify-content: center;
+    padding: 1px 2px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+  .beian-link:hover,
+  .beian-link:focus-visible {
+    border-color: var(--liblog-border);
+    background: var(--liblog-surface-tint);
+  }
+  .site-footer .beian-text {
+    flex: 0 0 auto;
+    min-width: 0;
+    text-align: center;
+    white-space: nowrap;
+    line-height: 1.35;
+  }
+  .site-footer .beian-number {
+    display: inline;
+    margin-top: 0;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+  .beian-separator { display: none; }
 }
 
 /* 页脚链接跟随 muted 文字色（不被全局链接主色覆盖；对齐 Panel SiteFooter） */
@@ -1428,7 +1483,7 @@ body.search-modal-open { overflow: hidden; }
 .back-to-top {
   position: fixed;
   right: 20px;
-  bottom: 24px;
+  bottom: var(--back-top-bottom, 24px);
   z-index: 55;
   display: grid;
   place-items: center;
@@ -2301,7 +2356,7 @@ mark {
   .post-nav { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-  .back-to-top { right: 14px; bottom: 16px; }
+  .back-to-top { right: 14px; --back-top-bottom: 16px; }
   .meta-sep { display: none; }
   .masonry { column-count: 1; column-gap: 0; }
   .article-body { font-size: 1rem; }

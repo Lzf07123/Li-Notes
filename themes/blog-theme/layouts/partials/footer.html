@@ -1,12 +1,12 @@
 {{ $brand := hugo.Data.brand }}
 {{ $footer := hugo.Data.strings.footer }}
 <footer class="site-footer relative mt-auto border-t border-border/60 bg-surface/60 backdrop-blur">
-  <div class="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-5 text-xs text-muted lg:px-8">
-    <span class="whitespace-nowrap">{{ replace $brand.copyright "{year}" (now.Format "2006") }}</span>
+  <div class="site-footer-inner mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-5 text-xs text-muted lg:px-8">
+    <span class="site-footer-copyright whitespace-nowrap">{{ replace $brand.copyright "{year}" (now.Format "2006") }}</span>
     {{ if or $brand.icp $brand.police }}
-    <span class="inline-flex flex-wrap items-center gap-x-2 gap-y-1" aria-label="{{ $footer.filing_label }}">
+    <span class="site-footer-filings inline-flex flex-wrap items-center gap-x-2 gap-y-1" aria-label="{{ $footer.filing_label }}">
       {{ with $brand.icp }}
-      <span class="inline-flex items-center gap-2">
+      <span class="beian-item inline-flex items-center gap-2">
         <a class="beian-link inline-flex items-center gap-1 whitespace-nowrap transition-colors duration-200 hover:text-foreground" href="{{ $brand.icp_url }}" target="_blank" rel="noopener noreferrer nofollow" aria-label="{{ $footer.icp_label }} {{ . }}">
           <span class="beian-icon" aria-hidden="true">
             {{ if or (hasPrefix $brand.icp_icon "/") (strings.Contains $brand.icp_icon ".") }}
@@ -14,13 +14,13 @@
             {{ else if hasPrefix $brand.icp_icon "<svg" }}{{ $brand.icp_icon | safeHTML }}
             {{ else }}<span class="filing-icon-placeholder">{{ with $footer.icon_fallback }}{{ . }}{{ end }}</span>{{ end }}
           </span>
-          <span class="beian-text">{{ $footer.icp_label }} {{ . }}</span>
+          <span class="beian-text"><span class="beian-label">{{ $footer.icp_label }}</span> <span class="beian-number">{{ . }}</span></span>
         </a>
       </span>
       {{ end }}
       {{ with $brand.police }}
-      <span class="inline-flex items-center gap-2">
-        {{ if $brand.icp }}<span aria-hidden="true" class="text-border">·</span>{{ end }}
+      <span class="beian-item inline-flex items-center gap-2">
+        {{ if $brand.icp }}<span aria-hidden="true" class="beian-separator text-border">·</span>{{ end }}
         <a class="beian-link inline-flex items-center gap-1 whitespace-nowrap transition-colors duration-200 hover:text-foreground" href="{{ $brand.police_url }}" target="_blank" rel="noopener noreferrer nofollow" aria-label="{{ $footer.police_label }} {{ . }}">
           <span class="beian-icon" aria-hidden="true">
             {{ if or (hasPrefix $brand.police_icon "/") (strings.Contains $brand.police_icon ".") }}
@@ -28,7 +28,7 @@
             {{ else if hasPrefix $brand.police_icon "<svg" }}{{ $brand.police_icon | safeHTML }}
             {{ else }}<span class="filing-icon-placeholder">{{ with $footer.icon_fallback }}{{ . }}{{ end }}</span>{{ end }}
           </span>
-          <span class="beian-text">{{ if not (strings.Contains . $footer.police_label) }}{{ $footer.police_label }} {{ end }}{{ . }}</span>
+          <span class="beian-text">{{ if not (strings.Contains . $footer.police_label) }}<span class="beian-label">{{ $footer.police_label }}</span> {{ end }}<span class="beian-number">{{ . }}</span></span>
         </a>
       </span>
       {{ end }}
