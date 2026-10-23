@@ -1973,7 +1973,7 @@ mark {
   margin: 24px auto 0;
   justify-content: flex-start;
 }
-.tag-chip { min-height: 44px; }
+.tag-chip { min-height: 36px; }
 
 /* 文章页：标题与正文共享阅读栏宽，桌面端目录独立悬浮在右侧。 */
 .article-header {
@@ -2843,11 +2843,18 @@ body {
 .archive-item a:hover { color: var(--liblog-primary); }
 .tag-cloud { max-width: 820px; gap: 10px; }
 .tag-chip {
-  min-height: 44px;
-  padding: 0 14px;
+  position: relative;
+  min-height: 36px;
+  padding: 0 12px;
   border-radius: 5px;
   background: var(--liblog-surface-raised);
   box-shadow: inset 0 1px 0 var(--liblog-inset-highlight);
+}
+.tag-chip::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
 }
 .tag-chip-count {
   border-radius: 3px;
@@ -3286,7 +3293,7 @@ body {
 
 
 /* ---------- 2026-10-23 页眉体验优化 ---------- */
-:root { --header-h: 72px; }
+:root { --header-h: 64px; }
 .site-header {
   border-color: var(--liblog-header-border);
   background: var(--liblog-header-bg);
@@ -3329,9 +3336,9 @@ body {
   gap: 10px;
 }
 .site-brand {
-  gap: 11px;
+  gap: 9px;
   min-height: 44px;
-  padding: 4px 9px 4px 4px;
+  padding: 3px 7px 3px 3px;
   border: 1px solid transparent;
   border-radius: 12px;
   transition:
@@ -3346,8 +3353,8 @@ body {
 }
 .site-brand img,
 .site-brand picture img {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--liblog-border-strong);
   border-radius: 11px;
   box-shadow:
@@ -3357,7 +3364,7 @@ body {
 .brand-name-text {
   color: var(--liblog-brand-fg);
   font-family: var(--liblog-font-display);
-  font-size: 1.06rem;
+  font-size: 1.02rem;
   font-weight: 600;
   letter-spacing: -0.025em;
   line-height: 1;
@@ -3383,7 +3390,7 @@ body {
 }
 .site-nav {
   gap: 2px;
-  padding: 4px;
+  padding: 2px;
   border: 1px solid var(--liblog-border);
   border-radius: 14px;
   background: var(--liblog-surface-tint);
@@ -3432,33 +3439,33 @@ body {
   flex: none;
 }
 .logo-fallback {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 11px;
 }
 @media (max-width: 768px) {
-  :root { --header-h: 64px; }
+  :root { --header-h: 56px; }
   .site-header-inner {
     gap: 7px;
     padding-inline: 14px;
   }
   .site-brand {
-    gap: 8px;
-    padding: 3px 5px 3px 3px;
+    gap: 7px;
+    padding: 2px 4px 2px 2px;
   }
   .site-brand img,
   .site-brand picture img,
   .logo-fallback {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     border-radius: 10px;
   }
   .brand-name-text {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
   .mobile-nav-primary {
-    gap: 2px;
-    padding: 3px;
+    gap: 1px;
+    padding: 1px;
     border: 1px solid var(--liblog-border);
     border-radius: 13px;
     background: var(--liblog-surface-tint);
