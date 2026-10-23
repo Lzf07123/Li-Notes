@@ -2,31 +2,74 @@
 {% block title %}标签管理 · Li&Notes 后台{% endblock %}
 {% block content %}
 <nav class="admin-breadcrumb" aria-label="面包屑">
-  <a href="/{{ admin_path }}/">仪表盘</a>
+  <a href="/{{ admin_path }}/">工作台</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <span aria-current="page">标签管理</span>
 </nav>
-<div class="list-head">
-  <h1>标签管理（{{ tags|length }}）</h1>
-</div>
-{% with table = table %}{% include "partials/table.html" %}{% endwith %}
+<header class="admin-page-head">
+  <div class="admin-page-heading">
+    <p class="admin-kicker">内容整理</p>
+    <h1>标签管理<span class="admin-title-count">{{ tags|length }}</span></h1>
+    <p class="admin-page-subtitle">先把重复或写错的标签合并，再回到笔记继续写作。标签变更会同步重建公开站。</p>
+  </div>
+</header>
+{% if tags %}
 <div class="admin-card">
-  <h2>重命名 / 合并 / 删除</h2>
-  <p class="field-help">选择要操作的标签；合并会把旧标签替换为新标签并去重，删除会从所有文章移除该标签。操作后自动重建公开站。</p>
-  <form method="post" action="/{{ admin_path }}/tags/apply" class="list-filters" data-busy>
+  <div class="admin-card-head">
+    <div>
+      <p class="admin-kicker">整理标签</p>
+      <h2>选择操作</h2>
+    </div>
+  </div>
+  <p class="field-help">重命名只改名称；合并会把旧标签替换为新标签并去重；删除会从所有笔记移除该标签。操作前请确认影响范围。</p>
+  <form method="post" action="/{{ admin_path }}/tags/apply" class="tag-tools" data-busy>
     <input type="hidden" name="_csrf" value="{{ csrf }}">
-    <select name="old_tag" aria-label="旧标签" required data-custom-dropdown>
-      {% for t in tags %}
-      <option value="{{ t.name }}">{{ t.name }}（{{ t.count }}）</option>
-      {% endfor %}
-    </select>
-    <input type="text" name="new_tag" placeholder="新标签（删除时留空）">
-    <select name="action" aria-label="操作" data-custom-dropdown>
-      <option value="rename">重命名</option>
-      <option value="merge">合并到新标签</option>
-      <option value="delete">删除标签</option>
-    </select>
-    <button type="submit" class="btn btn-secondary btn-sm">执行</button>
+    <label class="admin-field">
+      <span class="admin-field-label">当前标签</span>
+      <select name="old_tag" required data-custom-dropdown>
+        {% for t in tags %}
+        <option value="{{ t.name }}">{{ t.name }}（{{ t.count }} 篇）</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="admin-field">
+      <span class="admin-field-label">操作</span>
+      <select id="tag-action" name="action" data-custom-dropdown>
+        <option value="rename">重命名</option>
+        <option value="merge">合并到新标签</option>
+        <option value="delete">删除标签</option>
+      </select>
+    </label>
+    <label class="admin-field" id="tag-name-field">
+      <span class="admin-field-label">新名称</span>
+      <input type="text" name="new_tag" placeholder="例如 linux">
+      <small class="field-help">重命名或合并时填写；删除时无需填写。</small>
+    </label>
+    <button type="submit" class="btn btn-primary">执行调整</button>
   </form>
 </div>
+{% endif %}
+<div class="admin-section-head">
+  <div>
+    <p class="admin-kicker">全部标签</p>
+    <h2>当前分布</h2>
+  </div>
+  <small>篇数表示使用该标签的笔记数量</small>
+</div>
+{% with table = table %}{% include "partials/table.html" %}{% endwith %}
+<script>
+  (function () {
+    var action = document.getElementById("tag-action");
+    var field = document.getElementById("tag-name-field");
+    var input = field ? field.querySelector('input[name="new_tag"]') : null;
+    if (!action || !field || !input) return;
+    function sync() {
+      var needsName = action.value !== "delete";
+      field.hidden = !needsName;
+      input.required = needsName;
+    }
+    action.addEventListener("change", sync);
+    sync();
+  })();
+</script>
 {% endblock %}

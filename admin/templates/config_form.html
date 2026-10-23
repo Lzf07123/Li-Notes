@@ -2,7 +2,7 @@
 {% block title %}{{ label }} · Li&Notes 后台{% endblock %}
 {% block content %}
 <nav class="admin-breadcrumb" aria-label="面包屑">
-  <a href="/{{ admin_path }}/">仪表盘</a>
+  <a href="/{{ admin_path }}/">工作台</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <span aria-current="page">{{ label }}</span>
 </nav>
@@ -56,8 +56,8 @@
     {% endif %}
   {% endfor %}
   <div class="form-actions">
-    <button type="submit" class="btn" data-busy>保存并重建</button>
-    <a class="btn btn-ghost" href="/{{ admin_path }}/">返回仪表盘</a>
+    <button type="submit" class="btn btn-primary" data-busy>保存并重建</button>
+    <a class="btn btn-ghost" href="/{{ admin_path }}/">返回工作台</a>
     <a class="btn btn-ghost" href="/" target="_blank" rel="noopener">查看公开站首页</a>
   </div>
 </form>

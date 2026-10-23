@@ -1,3 +1,16 @@
+{% macro render_action(act) %}
+  {% if act.method %}
+  <form method="post" action="{{ act.href }}"{% if act.confirm %} data-confirm="{{ act.confirm }}"{% endif %}>
+    <input type="hidden" name="_csrf" value="{{ csrf }}">
+    {% if act.name %}<input type="hidden" name="{{ act.name }}" value="{{ act.value }}">{% endif %}
+    <button type="submit" class="btn-link{{ ' danger' if act.danger else '' }}">{{ act.label }}</button>
+  </form>
+  {% elif act.button %}
+  <button type="button" class="btn-link{{ ' ' + act.class if act.class else '' }}"{% if act.data_url %} data-url="{{ act.data_url }}"{% endif %} title="{{ act.label }}">{{ act.label }}</button>
+  {% else %}
+  <a class="btn-link{{ ' danger' if act.danger else '' }}" href="{{ act.href }}"{% if act.external %} target="_blank" rel="noopener"{% endif %} title="{{ act.label }}">{{ act.label }}</a>
+  {% endif %}
+{% endmacro %}
 {% if table %}
 <div class="table-shell-wrap">
   <table class="table-shell table-shell--cards{{ ' table-shell--striped' if table.striped else '' }}">
@@ -51,19 +64,22 @@
         </td>
         {% elif col.type == 'actions' %}
         <td class="table-col-actions" data-label="{{ col.label }}">
-          {% for act in row.get(col.key, []) %}
-            {% if act.method %}
-            <form method="post" action="{{ act.href }}"{% if act.confirm %} data-confirm="{{ act.confirm }}"{% endif %}>
-              <input type="hidden" name="_csrf" value="{{ csrf }}">
-              {% if act.name %}<input type="hidden" name="{{ act.name }}" value="{{ act.value }}">{% endif %}
-              <button type="submit" class="btn-link{{ ' danger' if act.danger else '' }}">{{ act.label }}</button>
-            </form>
-            {% elif act.button %}
-            <button type="button" class="btn-link{{ ' ' + act.class if act.class else '' }}"{% if act.data_url %} data-url="{{ act.data_url }}"{% endif %} title="{{ act.label }}">{{ act.label }}</button>
-            {% else %}
-            <a class="btn-link{{ ' danger' if act.danger else '' }}" href="{{ act.href }}"{% if act.external %} target="_blank" rel="noopener"{% endif %} title="{{ act.label }}">{{ act.label }}</a>
-            {% endif %}
+          {% set action_list = row.get(col.key, []) %}
+          {% set primary_actions = action_list|selectattr("primary")|list %}
+          {% set secondary_actions = action_list|rejectattr("primary")|list %}
+          {% for act in primary_actions %}
+          {{ render_action(act) }}
           {% endfor %}
+          {% if secondary_actions %}
+          <details class="row-actions-more" data-action-menu>
+            <summary aria-label="更多操作">更多</summary>
+            <div class="row-actions-menu">
+              {% for act in secondary_actions %}
+              {{ render_action(act) }}
+              {% endfor %}
+            </div>
+          </details>
+          {% endif %}
         </td>
         {% else %}
         <td class="table-col-{{ col.key }}{{ align_class }}" data-label="{{ col.label }}">{{ row[col.key] }}</td>
@@ -73,7 +89,14 @@
       {% endif %}
     {% else %}
       <tr class="table-empty-row">
-        <td colspan="{{ table.columns|length }}">{{ table.empty or '暂无数据' }}</td>
+        <td colspan="{{ table.columns|length }}">
+          <div class="table-empty-state">
+            <span>{{ table.empty or '暂无数据' }}</span>
+            {% if table.empty_action %}
+            <a class="btn btn-sm{{ ' btn-secondary' if table.empty_action.secondary else '' }}" href="{{ table.empty_action.href }}">{{ table.empty_action.label }}</a>
+            {% endif %}
+          </div>
+        </td>
       </tr>
     {% endfor %}
     </tbody>

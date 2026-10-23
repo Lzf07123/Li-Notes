@@ -18,6 +18,7 @@
   </script>
 </head>
 <body class="admin-body">
+  <a class="skip-link" href="#admin-main">跳到主要内容</a>
   <div class="admin-layout">
     <aside class="admin-sidebar">
       <div class="admin-sidebar-head">
@@ -30,20 +31,25 @@
           <button id="theme-toggle" class="btn btn-sm btn-ghost" type="button" aria-label="切换深浅色">深浅色</button>
         </div>
         <input id="admin-nav-filter" class="admin-nav-filter" type="search"
-               placeholder="过滤导航" aria-label="过滤后台导航" autocomplete="off">
+               placeholder="查找功能" aria-label="查找后台功能" autocomplete="off">
       </div>
-      <nav class="admin-nav" aria-label="后台栏目">
-        {% for group in nav_groups %}
-        <div class="admin-nav-group">
-          <p class="admin-nav-group-label">{{ group["label"] }}</p>
-          {% for item in group["items"] %}
-          <a href="/{{ admin_path }}{{ item["path"] }}" class="admin-nav-link{{ ' active' if item["active"] else '' }}">
-            <svg class="admin-nav-icon" aria-hidden="true"><use href="#nav-icon-{{ item["icon"] }}"></use></svg>
-            <span>{{ item["label"] }}</span>
-          </a>
-          {% endfor %}
-        </div>
+      {% set nav_id = "admin-nav" %}
+      {% set nav_variant = "desktop" %}
+      {% include "partials/admin_nav.html" %}
+      <nav class="admin-compact-nav" aria-label="常用后台栏目">
+        {% for item in compact_nav %}
+        <a href="/{{ admin_path }}{{ item['path'] }}"
+           class="admin-compact-link{{ ' admin-compact-link--primary' if item.get('primary') else '' }}{{ ' active' if item['active'] else '' }}"
+           {% if item["active"] %}aria-current="page"{% endif %}>
+          <svg aria-hidden="true"><use href="#nav-icon-{{ item['icon'] }}"></use></svg>
+          <span>{{ item["label"] }}</span>
+        </a>
         {% endfor %}
+        <button type="button" class="admin-compact-link{{ ' active' if compact_more_active else '' }}"
+                data-open-admin-nav aria-haspopup="dialog">
+          <svg aria-hidden="true"><use href="#nav-icon-more"></use></svg>
+          <span>全部功能</span>
+        </button>
       </nav>
       <div class="admin-sidebar-foot">
         <form method="post" action="/{{ admin_path }}/logout" data-busy>
@@ -55,8 +61,11 @@
         </form>
       </div>
     </aside>
-    <main class="admin-main">
-      {% if flash %}<p class="flash{{ ' flash--error' if flash_type == 'error' else '' }}" role="status">{{ flash }}</p>{% endif %}
+    <main id="admin-main" class="admin-main" tabindex="-1">
+      {% if flash %}
+      <p class="flash{{ ' flash--error' if flash_type == 'error' else '' }}"
+         role="{{ 'alert' if flash_type == 'error' else 'status' }}">{{ flash }}</p>
+      {% endif %}
       <div id="build-banner" class="flash build-banner" hidden role="status" aria-live="polite">
         <span id="build-banner-text"></span>
         <button id="build-banner-refresh" type="button" class="btn-link" hidden>刷新</button>
@@ -94,6 +103,12 @@
     <symbol id="nav-icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M9 22V12h6v10"></path>
     </symbol>
+    <symbol id="nav-icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 5v14"></path><path d="M5 12h14"></path>
+    </symbol>
+    <symbol id="nav-icon-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>
+    </symbol>
     <symbol id="nav-icon-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="2" y="5" width="20" height="14" rx="2"></rect><circle cx="8" cy="12" r="2"></circle>
       <path d="M5 17c0-1.7 1.8-2.5 3-2.5s3 .8 3 2.5"></path><path d="M15 10h4"></path><path d="M15 14h4"></path>
@@ -111,6 +126,33 @@
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path>
     </symbol>
   </svg>
+  <dialog id="admin-nav-dialog" class="admin-nav-dialog" aria-labelledby="admin-nav-dialog-title">
+    <div class="admin-nav-dialog-head">
+      <div>
+        <p class="admin-kicker">所有功能</p>
+        <h2 id="admin-nav-dialog-title">去哪里？</h2>
+      </div>
+      <button type="button" class="admin-dialog-close" data-close-admin-nav aria-label="关闭全部功能">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 6 6 18"></path><path d="m6 6 12 12"></path>
+        </svg>
+      </button>
+    </div>
+    <label class="visually-hidden" for="admin-nav-dialog-filter">查找后台功能</label>
+    <input id="admin-nav-dialog-filter" class="admin-nav-filter" type="search"
+           placeholder="输入栏目名称，例如“备份”" autocomplete="off">
+    {% set nav_id = "admin-nav-dialog-list" %}
+    {% set nav_variant = "dialog" %}
+    {% include "partials/admin_nav.html" %}
+    <div class="admin-nav-dialog-foot">
+      <a class="btn btn-sm btn-secondary" href="/" target="_blank" rel="noopener">打开公开站</a>
+      <form method="post" action="/{{ admin_path }}/logout" data-busy>
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <button type="submit" class="btn btn-sm btn-ghost">退出后台</button>
+      </form>
+    </div>
+  </dialog>
   <button id="to-top" class="to-top" type="button" aria-label="返回顶部">↑</button>
   <script>
     (function () {
@@ -139,7 +181,7 @@
           if (!window.confirm(form.dataset.confirm)) e.preventDefault();
         });
       });
-      var activeNav = document.querySelector(".admin-nav-link.active");
+      var activeNav = document.querySelector(".admin-sidebar .admin-nav-link.active");
       if (activeNav && activeNav.scrollIntoView) {
         activeNav.scrollIntoView({ block: "nearest", inline: "center" });
       }
@@ -150,32 +192,6 @@
         }, { passive: true });
         toTop.addEventListener("click", function () {
           window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-      }
-      var navFilter = document.getElementById("admin-nav-filter");
-      if (navFilter) {
-        var navLinks = Array.prototype.slice.call(document.querySelectorAll(".admin-nav-link"));
-        navFilter.addEventListener("input", function () {
-          var q = navFilter.value.trim().toLowerCase();
-          var firstVisible = null;
-          navLinks.forEach(function (link) {
-            var show = !q || link.textContent.toLowerCase().indexOf(q) >= 0;
-            link.hidden = !show;
-            if (show && !firstVisible) firstVisible = link;
-          });
-          document.querySelectorAll(".admin-nav-group").forEach(function (group) {
-            group.hidden = Array.prototype.every.call(
-              group.querySelectorAll(".admin-nav-link"),
-              function (link) { return link.hidden; }
-            );
-          });
-          if (firstVisible) firstVisible.scrollIntoView({ block: "nearest" });
-        });
-        navFilter.addEventListener("keydown", function (e) {
-          if (e.key === "Enter") {
-            var visible = navLinks.filter(function (link) { return !link.hidden; });
-            if (visible.length) window.location.href = visible[0].getAttribute("href");
-          }
         });
       }
     })();
@@ -231,5 +247,6 @@
     })();
   </script>
   <script src="/{{ admin_path }}/static/js/admin-dropdown.js?v={{ asset_version.admin_dropdown }}"></script>
+  <script src="/{{ admin_path }}/static/js/admin-ui.js?v={{ asset_version.admin_ui }}"></script>
 </body>
 </html>

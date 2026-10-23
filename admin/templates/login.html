@@ -20,7 +20,7 @@
   <main class="auth-shell">
     <aside class="auth-aside">
       <div class="auth-brand">
-        {% if brand.logo %}<img class="auth-logo-img" src="{{ brand.logo }}" alt="{{ brand.name }}">{% else %}<span class="auth-logo" aria-hidden="true">{{ brand.name[:1] }}</span>{% endif %}
+        {% if brand.logo %}<img class="auth-logo-img" src="{{ admin_static_url(brand.logo) }}" alt="{{ brand.name }}">{% else %}<span class="auth-logo" aria-hidden="true">{{ brand.name[:1] }}</span>{% endif %}
         <span class="auth-brand-name">{{ brand.name }}</span>
       </div>
       <div class="auth-aside-body">
@@ -39,7 +39,7 @@
     </aside>
     <section class="auth-panel">
       <div class="auth-mobile-brand">
-        {% if brand.logo %}<img class="auth-logo-img" src="{{ brand.logo }}" alt="" aria-hidden="true">{% else %}<span class="auth-logo" aria-hidden="true">{{ brand.name[:1] }}</span>{% endif %}
+        {% if brand.logo %}<img class="auth-logo-img" src="{{ admin_static_url(brand.logo) }}" alt="" aria-hidden="true">{% else %}<span class="auth-logo" aria-hidden="true">{{ brand.name[:1] }}</span>{% endif %}
         <span>{{ brand.name }}</span>
       </div>
       <div class="auth-theme-row">
@@ -53,7 +53,7 @@
         <input type="hidden" name="_csrf" value="{{ csrf }}">
         <label>用户名<input type="text" name="username" autocomplete="username" required></label>
         <label>密码<input type="password" name="password" autocomplete="current-password" required></label>
-        <button type="submit" class="btn btn-block">登录</button>
+        <button type="submit" class="btn btn-primary btn-block">登录</button>
       </form>
       {% if oidc_enabled %}
       <div class="auth-divider" role="separator"><span>或</span></div>

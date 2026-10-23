@@ -2,19 +2,28 @@
 {% block title %}{{ label }} · Li&Notes 后台{% endblock %}
 {% block content %}
 <nav class="admin-breadcrumb" aria-label="面包屑">
-  <a href="/{{ admin_path }}/">仪表盘</a>
+  <a href="/{{ admin_path }}/">工作台</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <span aria-current="page">{{ label }}</span>
 </nav>
-<div class="list-head">
-  <h1>{{ label }}（{{ total }}）</h1>
-  <div class="list-actions">
-    <a class="btn" href="/{{ admin_path }}/posts/new">新建</a>
-    <a class="btn btn-sm btn-secondary" href="/{{ admin_path }}/posts/import">批量导入</a>
-    <a class="btn btn-sm btn-secondary" href="/{{ admin_path }}/posts/export?q={{ q|urlencode }}&status={{ status }}&tag={{ tag|urlencode }}&pinned={{ pinned }}&sort={{ sort }}&order={{ order }}">导出 CSV</a>
-    <a class="btn btn-sm btn-ghost" href="/{{ section }}/" target="_blank" rel="noopener">查看公开页</a>
+<header class="admin-page-head">
+  <div class="admin-page-heading">
+    <p class="admin-kicker">内容管理</p>
+    <h1>{{ label }}<span class="admin-title-count">{{ total }}</span></h1>
+    <p class="admin-page-subtitle">搜索、筛选、编辑和发布所有笔记。勾选内容后可执行批量操作。</p>
   </div>
-</div>
+  <div class="admin-page-actions">
+    <a class="btn btn-primary" href="/{{ admin_path }}/posts/new">新建笔记</a>
+    <details class="admin-action-menu" data-action-menu>
+      <summary class="btn btn-secondary">导入与导出</summary>
+      <div class="admin-action-menu-list">
+        <a href="/{{ admin_path }}/posts/import">批量导入 Markdown</a>
+        <a href="/{{ admin_path }}/posts/export?q={{ q|urlencode }}&amp;status={{ status }}&amp;tag={{ tag|urlencode }}&amp;pinned={{ pinned }}&amp;sort={{ sort }}&amp;order={{ order }}">导出当前筛选 CSV</a>
+        <a href="/{{ section }}/" target="_blank" rel="noopener">查看公开页</a>
+      </div>
+    </details>
+  </div>
+</header>
 <form class="list-filters" method="get" action="/{{ admin_path }}/{{ section }}">
   <label class="visually-hidden" for="q">搜索标题、标识或标签</label>
   <input id="q" type="search" name="q" value="{{ q }}" placeholder="搜索标题 / 标识 / 标签">
@@ -30,7 +39,7 @@
     {% endfor %}
   </select>
   <select name="pinned" aria-label="按置顶筛选" data-custom-dropdown>
-    <option value="">全部文章</option>
+    <option value="">全部笔记</option>
     <option value="1" {% if pinned == "1" %}selected{% endif %}>已置顶</option>
     <option value="0" {% if pinned == "0" %}selected{% endif %}>未置顶</option>
   </select>
@@ -48,30 +57,39 @@
   <a class="btn-link" href="/{{ admin_path }}/{{ section }}" data-clear-filters>清除</a>
   {% endif %}
 </form>
-<form id="bulk-form" class="bulk-bar" method="post" action="/{{ admin_path }}/posts/bulk">
-  <input type="hidden" name="_csrf" value="{{ csrf }}">
-  <select name="action" aria-label="批量操作" data-custom-dropdown>
-    <option value="publish">批量发布</option>
-    <option value="draft">批量转草稿</option>
-    <option value="pin">批量置顶</option>
-    <option value="unpin">批量取消置顶</option>
-    <option value="add_tag">批量加标签</option>
-    <option value="remove_tag">批量移除标签</option>
-    <option value="delete">批量删除</option>
-  </select>
-  <input type="text" name="tag" list="bulk-tag-options" placeholder="标签（加/移除时必填）" aria-label="批量标签">
-  {% if all_tags %}
-  <datalist id="bulk-tag-options">
-    {% for t in all_tags %}<option value="{{ t }}"></option>{% endfor %}
-  </datalist>
-  {% endif %}
-  <button type="submit" class="btn btn-secondary btn-sm">执行</button>
-  <label class="bulk-select-all">
-    <input type="checkbox" id="bulk-select-all">
-    <span>全选当前筛选结果（<span id="bulk-filter-total">{{ total }}</span> 篇）</span>
-  </label>
-  <span id="bulk-count" class="bulk-count">已选 0 篇</span>
-</form>
+<details class="bulk-panel">
+  <summary class="bulk-panel-summary">批量操作 · 已选 0 篇</summary>
+  <form id="bulk-form" class="bulk-bar" method="post" action="/{{ admin_path }}/posts/bulk">
+    <input type="hidden" name="_csrf" value="{{ csrf }}">
+    <label class="bulk-field">
+      <span>操作</span>
+      <select name="action" aria-label="批量操作" data-custom-dropdown>
+        <option value="publish">批量发布</option>
+        <option value="draft">批量转草稿</option>
+        <option value="pin">批量置顶</option>
+        <option value="unpin">批量取消置顶</option>
+        <option value="add_tag">批量加标签</option>
+        <option value="remove_tag">批量移除标签</option>
+        <option value="delete">批量删除</option>
+      </select>
+    </label>
+    <label class="bulk-field">
+      <span>标签</span>
+      <input type="text" name="tag" list="bulk-tag-options" placeholder="选择加/移除标签时填写" aria-label="批量标签" hidden>
+    </label>
+    {% if all_tags %}
+    <datalist id="bulk-tag-options">
+      {% for t in all_tags %}<option value="{{ t }}"></option>{% endfor %}
+    </datalist>
+    {% endif %}
+    <button type="submit" class="btn btn-secondary btn-sm">执行</button>
+    <label class="bulk-select-all">
+      <input type="checkbox" id="bulk-select-all">
+      <span>全选当前筛选结果（<span id="bulk-filter-total">{{ total }}</span> 篇）</span>
+    </label>
+    <span id="bulk-count" class="bulk-count" role="status" aria-live="polite">已选 0 篇</span>
+  </form>
+</details>
 {% set bulk_form_id = "bulk-form" %}
 {% include "partials/table.html" %}
 <script>
@@ -98,7 +116,15 @@
       var n = document.querySelectorAll(".bulk-check:checked").length;
       var all = !!(selectAll && selectAll.checked);
       var target = all ? filterTotal : n;
-      if (!target) { e.preventDefault(); return; }
+      if (!target) {
+        e.preventDefault();
+        count.textContent = "请先勾选要处理的笔记";
+        count.classList.add("bulk-count--warning");
+        var panel = form.closest("details");
+        if (panel) panel.open = true;
+        return;
+      }
+      count.classList.remove("bulk-count--warning");
       if (all) {
         form.querySelectorAll('input[type="hidden"][data-filter]').forEach(function (h) { h.remove(); });
         var filterForm = document.querySelector(".list-filters");

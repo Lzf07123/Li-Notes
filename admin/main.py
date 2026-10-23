@@ -165,7 +165,12 @@ def _build_info() -> dict:
 templates = Jinja2Templates(directory=str(ROOT / "admin" / "templates"))
 rate = security.RateLimiter()
 DUMMY_HASH = security.hash_password("dummy-timing-equalizer")
-STATUS_LABELS = {"published": "已发布", "draft": "草稿", "active": "进行中"}
+STATUS_LABELS = {
+    "published": "已发布",
+    "draft": "草稿",
+    "scheduled": "定时发布",
+    "active": "进行中",
+}
 BULK_MAX_SLUGS = 1000
 ADMIN_BADGE_VARIANTS = {
     "published": "admin-badge--published",
@@ -175,39 +180,40 @@ ADMIN_BADGE_VARIANTS = {
 }
 ADMIN_NAV = [
     {
-        "label": "内容",
+        "label": "写作",
         "items": [
+            {"label": "工作台", "path": "/", "icon": "home"},
             {"label": "笔记", "path": "/posts", "icon": "file"},
             {"label": "标签", "path": "/tags", "icon": "text"},
-            {"label": "回收站", "path": "/trash", "icon": "archive"},
+            {"label": "媒体库", "path": "/media", "icon": "image"},
         ],
     },
     {
-        "label": "设置",
-        "items": [
-            {"label": "品牌", "path": "/config/brand", "icon": "palette"},
-            {"label": "文案", "path": "/config/strings", "icon": "text"},
-            {"label": "作者资料", "path": "/config/profile", "icon": "card"},
-            {"label": "知识速查", "path": "/config/knowledge", "icon": "book"},
-            {"label": "账号", "path": "/settings/account", "icon": "user"},
-        ],
-    },
-    {
-        "label": "跨端",
+        "label": "发布",
         "items": [
             {"label": "内容索引", "path": "/content-index", "icon": "text"},
             {"label": "小程序同步", "path": "/knowledge-sync", "icon": "book"},
         ],
     },
     {
-        "label": "系统",
+        "label": "站点设置",
         "items": [
-            {"label": "媒体库", "path": "/media", "icon": "image"},
+            {"label": "品牌", "path": "/config/brand", "icon": "palette"},
+            {"label": "文案", "path": "/config/strings", "icon": "text"},
+            {"label": "作者资料", "path": "/config/profile", "icon": "card"},
+            {"label": "知识速查", "path": "/config/knowledge", "icon": "book"},
+        ],
+    },
+    {
+        "label": "维护",
+        "items": [
+            {"label": "回收站", "path": "/trash", "icon": "archive"},
+            {"label": "内容体检", "path": "/audit", "icon": "card"},
             {"label": "统计", "path": "/stats", "icon": "chart"},
             {"label": "操作日志", "path": "/logs", "icon": "text"},
             {"label": "健康检查", "path": "/health", "icon": "chart"},
-            {"label": "内容体检", "path": "/audit", "icon": "card"},
             {"label": "备份", "path": "/backup", "icon": "archive"},
+            {"label": "账号", "path": "/settings/account", "icon": "user"},
         ],
     },
 ]
@@ -224,6 +230,17 @@ def ap(path: str) -> str:
     return f"/{settings.admin_path}{path}"
 
 
+def admin_static_url(path: str) -> str:
+    """把公开站静态路径映射到后台静态挂载，避免认证页出现坏图。"""
+    value = str(path or "")
+    if value.startswith(("/assets/", "/img/")):
+        return f"/{settings.admin_path}/static{value}"
+    return value
+
+
+templates.env.globals["admin_static_url"] = admin_static_url
+
+
 def build_admin_nav(request: Request) -> list[dict]:
     """后台侧边栏导航：路径前缀匹配当前项，模板只负责渲染。"""
     current = request.url.path
@@ -232,14 +249,67 @@ def build_admin_nav(request: Request) -> list[dict]:
         items = []
         for item in group["items"]:
             base = ap(item["path"])
+            active = current == base
+            if item["path"] != "/" and current.startswith(base + "/"):
+                active = True
             items.append(
                 {
                     **item,
-                    "active": current == base or current.startswith(base + "/"),
+                    "active": active,
                 }
             )
-        groups.append({"label": group["label"], "items": items})
+        groups.append(
+            {
+                "label": group["label"],
+                "items": items,
+                "expanded": group["label"] == "写作"
+                or any(item["active"] for item in items),
+            }
+        )
     return groups
+
+
+def build_compact_nav(request: Request) -> tuple[list[dict], bool]:
+    """窄屏只保留四个高频入口，其余栏目收进“全部功能”。"""
+    current = request.url.path
+    root = ap("/")
+    posts = ap("/posts")
+    media = ap("/media")
+    items = [
+        {
+            "label": "工作台",
+            "path": "/",
+            "icon": "home",
+            "active": current == root,
+        },
+        {
+            "label": "笔记",
+            "path": "/posts",
+            "icon": "file",
+            "active": current == posts
+            or (current.startswith(posts + "/") and current != posts + "/new"),
+        },
+        {
+            "label": "新建",
+            "path": "/posts/new",
+            "icon": "plus",
+            "active": current == posts + "/new",
+            "primary": True,
+        },
+        {
+            "label": "媒体",
+            "path": "/media",
+            "icon": "image",
+            "active": current == media or current.startswith(media + "/"),
+        },
+    ]
+    more_active = current not in {
+        root,
+        posts,
+        posts + "/new",
+        media,
+    } and not current.startswith(posts + "/")
+    return items, more_active
 
 
 def display_path(path: str) -> str:
@@ -376,6 +446,10 @@ def render(request: Request, name: str, context: dict) -> HTMLResponse:
     context.setdefault("csrf", sess["csrf"] if sess else "")
     context.setdefault("status_labels", STATUS_LABELS)
     context.setdefault("nav_groups", build_admin_nav(request))
+    compact_nav, compact_more_active = build_compact_nav(request)
+    context.setdefault("compact_nav", compact_nav)
+    context.setdefault("compact_more_active", compact_more_active)
+    context.setdefault("current_admin_path", request.url.path)
     flash = request.query_params.get("ok") or request.query_params.get("error")
     context.setdefault("flash", flash)
     context.setdefault("flash_type", "error" if request.query_params.get("error") else "ok")
@@ -424,6 +498,7 @@ def _asset_version() -> dict:
         "tokens": css.get("tokens", "1"),
         "style": css.get("style", "1"),
         "admin": css.get("admin", "1"),
+        "admin_ui": js.get("admin_ui", "1"),
         "effects": js.get("effects", "1"),
         "fuse": js.get("fuse", "1"),
         "reading_progress": js.get("reading_progress", "1"),
@@ -790,12 +865,46 @@ def setup_oidc_bind(request: Request, csrf_token: str = Form("", alias="_csrf"))
 @app.get(ap("/"), response_class=HTMLResponse)
 def dashboard(request: Request):
     require_login(request)
-    counts = {"posts": len(store.list_markdown("posts"))}
-    posts = store.list_markdown("posts")
-    posts.sort(key=lambda it: not it.get("pinned", False))
-    drafts = [p for p in posts if p.get("status") == "draft"]
-    scheduled = [p for p in posts if p.get("status") != "draft" and _is_future(str(p.get("date") or ""))]
-    recent_posts = posts[:5]
+    all_posts = store.list_markdown("posts")
+    counts = {"posts": len(all_posts)}
+    drafts = [p for p in all_posts if p.get("status") == "draft"]
+    scheduled = [
+        p
+        for p in all_posts
+        if p.get("status") != "draft" and _is_future(str(p.get("date") or ""))
+    ]
+    recent_posts = sorted(
+        all_posts,
+        key=lambda item: (
+            str(item.get("date") or ""),
+            float(item.get("mtime") or 0),
+            item.get("slug", ""),
+        ),
+        reverse=True,
+    )[:5]
+    scheduled_slugs = {item["slug"] for item in scheduled}
+    for item in recent_posts:
+        status = "scheduled" if item["slug"] in scheduled_slugs else item["status"]
+        item["status_label"] = STATUS_LABELS.get(status, status)
+        item["status_class"] = ADMIN_BADGE_VARIANTS.get(
+            status, "admin-badge--muted"
+        )
+    latest_note = max(
+        all_posts,
+        key=lambda item: float(item.get("mtime") or 0),
+        default=None,
+    )
+    if latest_note:
+        edited_at = float(latest_note.get("mtime") or 0)
+        latest_note = {
+            **latest_note,
+            "edited_at": (
+                datetime.datetime.fromtimestamp(edited_at).strftime("%m-%d %H:%M")
+                if edited_at
+                else "刚刚"
+            ),
+        }
+    published_count = max(0, counts["posts"] - len(drafts) - len(scheduled))
     conn = connect()
     stats = conn.execute(
         "SELECT path, MAX(day) AS day, SUM(views) AS views "
@@ -830,24 +939,6 @@ def dashboard(request: Request):
     top_max = max((r["views"] for r in top_rows), default=0)
     for r in top_rows:
         r["pct"] = round(r["views"] * 100 / top_max) if top_max else 0
-    recent_columns = [
-        {"key": "title", "label": "标题", "type": "link"},
-        {"key": "date", "label": "日期", "type": "text"},
-        {"key": "status", "label": "状态", "type": "badge"},
-        {"key": "actions", "label": "操作", "type": "actions"},
-    ]
-    recent_rows = [
-        {
-            "title": p["title"],
-            "title_href": ap(f"/posts/{p['slug']}/edit"),
-            "date": p["date"],
-            "status": p["status"],
-            "status_label": STATUS_LABELS.get(p["status"], p["status"]),
-                "status_class": ADMIN_BADGE_VARIANTS.get(p["status"], "admin-badge--muted"),
-            "actions": [{"label": "编辑", "href": ap(f"/posts/{p['slug']}/edit")}],
-        }
-        for p in recent_posts
-    ]
     stats_columns = [
         {"key": "path", "label": "路径", "type": "link"},
         {"key": "day", "label": "最近访问", "type": "text"},
@@ -897,6 +988,8 @@ def dashboard(request: Request):
         "dashboard.html",
         {
             "counts": counts,
+            "published_count": published_count,
+            "latest_note": latest_note,
             "drafts": drafts,
             "scheduled": scheduled,
             "recent_posts": recent_posts,
@@ -906,13 +999,6 @@ def dashboard(request: Request):
             "output_info": output_info,
             "trend": trend,
             "top_rows": top_rows,
-            "recent_table": {
-                "caption": "最近文章",
-                "columns": recent_columns,
-                "rows": recent_rows,
-                "empty": "暂无文章",
-                "striped": True,
-            },
             "stats_table": {
                 "caption": "最近访问统计",
                 "columns": stats_columns,
@@ -1710,13 +1796,17 @@ def tags_page(request: Request):
     tags = _tag_counts()
     columns = [
         {"key": "name", "label": "标签", "type": "text"},
-        {"key": "count", "label": "文章数", "type": "number"},
+        {"key": "count", "label": "笔记数", "type": "number"},
     ]
     table = {
         "caption": "标签列表",
         "columns": columns,
         "rows": [{"name": t["name"], "count": t["count"]} for t in tags],
         "empty": "还没有标签",
+        "empty_action": {
+            "href": ap("/posts/new"),
+            "label": "去写一篇带标签的笔记",
+        },
         "striped": True,
     }
     return render(request, "tags.html", {"tags": tags, "table": table})
@@ -1804,6 +1894,11 @@ def trash_page(request: Request):
         "columns": columns,
         "rows": rows,
         "empty": "回收站是空的",
+        "empty_action": {
+            "href": ap("/posts"),
+            "label": "返回笔记列表",
+            "secondary": True,
+        },
         "striped": True,
     }
     return render(
@@ -2165,8 +2260,17 @@ def section_list(
                 group_year = year
                 rows.append({"__group": year or "未标注"})
         actions = [
-            {"label": "编辑", "href": ap(f"/{section}/{item['slug']}/edit")},
-            {"label": "查看", "href": f"/{section}/{item['slug']}/", "external": True},
+            {
+                "label": "编辑",
+                "href": ap(f"/{section}/{item['slug']}/edit"),
+                "primary": True,
+            },
+            {
+                "label": "查看",
+                "href": f"/{section}/{item['slug']}/",
+                "external": True,
+                "primary": True,
+            },
             {"label": "复制", "href": ap(f"/{section}/{item['slug']}/duplicate"), "method": "post"},
         ]
         if section == "posts":
@@ -2241,11 +2345,21 @@ def section_list(
         if (q or status)
         else "还没有笔记，点右上角“新建”开始。"
     )
+    empty_action = {
+        "href": ap(f"/{section}"),
+        "label": "清除筛选",
+        "secondary": True,
+    } if (q or status or tag or pinned) else {
+        "href": ap(f"/{section}/new"),
+        "label": "新建第一篇笔记",
+        "secondary": False,
+    }
     table = {
         "caption": f"{SECTIONS[section]['label']}列表",
         "columns": columns,
         "rows": rows,
         "empty": empty,
+        "empty_action": empty_action,
         "striped": True,
         "sort": sort,
         "order": order,

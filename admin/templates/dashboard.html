@@ -1,105 +1,242 @@
 {% extends "base.html" %}
-{% block title %}仪表盘 · Li&Notes 后台{% endblock %}
+{% block title %}工作台 · Li&Notes 后台{% endblock %}
 {% block content %}
-<div class="dashboard-head">
-  <h1>仪表盘</h1>
-  <a class="btn" href="/{{ admin_path }}/posts/new">新建笔记</a>
+<header class="admin-page-head">
+  <div class="admin-page-heading">
+    <p class="admin-kicker">写作工作台</p>
+    <h1>工作台</h1>
+    <p class="admin-page-subtitle">从一篇笔记开始。保存内容后，公开站会在后台自动构建。</p>
+  </div>
+  <div class="admin-page-actions">
+    <a class="btn btn-secondary" href="/{{ admin_path }}/posts/new">新建笔记</a>
+  </div>
+</header>
+
+<section class="workspace-hero" aria-labelledby="workspace-start-title">
+  <div class="workspace-hero-copy">
+    <p class="admin-kicker">现在开始</p>
+    <h2 id="workspace-start-title">继续记录你的学习足迹</h2>
+    {% if latest_note %}
+    <p>上次编辑的是「{{ latest_note.title }}」（{{ latest_note.edited_at }}）。继续补完内容，或开始一篇新的笔记。</p>
+    {% else %}
+    <p>先写正文，再按需补充摘要、标签和封面。保存后，公开站会自动生成内容与搜索索引。</p>
+    {% endif %}
+    <div class="workspace-actions">
+      {% if latest_note %}
+      <a class="btn btn-primary" href="/{{ admin_path }}/posts/{{ latest_note.slug }}/edit">继续上次编辑</a>
+      <a class="btn btn-secondary" href="/{{ admin_path }}/posts/new">开始新笔记</a>
+      {% else %}
+      <a class="btn btn-primary" href="/{{ admin_path }}/posts/new">写第一篇笔记</a>
+      {% endif %}
+    </div>
+  </div>
+  <dl class="workspace-metrics" aria-label="内容概况">
+    <div>
+      <dt>已发布笔记</dt>
+      <dd>{{ published_count }}</dd>
+    </div>
+    <div>
+      <dt>草稿</dt>
+      <dd>{{ drafts|length }}</dd>
+    </div>
+    <div>
+      <dt>媒体图片</dt>
+      <dd>{{ media_count }}</dd>
+    </div>
+  </dl>
+</section>
+
+<div class="dashboard-grid dashboard-grid--lead">
+  <section class="admin-card dashboard-panel" aria-labelledby="attention-title">
+    <div class="admin-card-head">
+      <div>
+        <p class="admin-kicker">需要你处理</p>
+        <h2 id="attention-title">待处理</h2>
+      </div>
+      <span class="admin-badge {{ 'admin-badge--draft' if drafts or scheduled or audit_danger or audit_warning else 'admin-badge--published' }}">
+        {{ "有待办" if drafts or scheduled or audit_danger or audit_warning else "全部正常" }}
+      </span>
+    </div>
+    <ul class="attention-list">
+      <li class="attention-item{{ ' attention-item--quiet' if not drafts else '' }}">
+        <span class="attention-mark" aria-hidden="true"></span>
+        <div class="attention-copy">
+          <strong>草稿</strong>
+          {% if drafts %}
+          <span>{{ drafts|length }} 篇笔记还没有发布</span>
+          {% else %}
+          <span>没有待发布的草稿</span>
+          {% endif %}
+        </div>
+        <a class="btn-link" href="/{{ admin_path }}/posts?status=draft">查看</a>
+      </li>
+      <li class="attention-item{{ ' attention-item--quiet' if not scheduled else '' }}">
+        <span class="attention-mark" aria-hidden="true"></span>
+        <div class="attention-copy">
+          <strong>定时文章</strong>
+          {% if scheduled %}
+          <span>{{ scheduled|length }} 篇将在未来日期发布</span>
+          {% else %}
+          <span>没有等待发布日期的文章</span>
+          {% endif %}
+        </div>
+        <a class="btn-link" href="/{{ admin_path }}/posts?status=scheduled">查看</a>
+      </li>
+      <li class="attention-item{{ ' attention-item--danger' if audit_danger else (' attention-item--warning' if audit_warning else ' attention-item--quiet') }}">
+        <span class="attention-mark" aria-hidden="true"></span>
+        <div class="attention-copy">
+          <strong>内容体检</strong>
+          <span>严重 {{ audit_danger }} 项 · 提醒 {{ audit_warning }} 项</span>
+        </div>
+        <a class="btn-link" href="/{{ admin_path }}/audit">检查</a>
+      </li>
+    </ul>
+
+    {% if drafts %}
+    <div class="attention-detail">
+      <h3>草稿列表</h3>
+      <ul class="draft-list">
+        {% for d in drafts[:5] %}
+        <li>
+          <a href="/{{ admin_path }}/posts/{{ d.slug }}/edit">{{ d.title }}</a>
+          <time>{{ d.date }}</time>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    {% if scheduled %}
+    <div class="attention-detail">
+      <h3>定时文章（{{ scheduled|length }}）</h3>
+      <ul class="draft-list">
+        {% for d in scheduled[:5] %}
+        <li>
+          <a href="/{{ admin_path }}/posts/{{ d.slug }}/edit">{{ d.title }}</a>
+          <time>{{ d.date }}</time>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="admin-card dashboard-panel" aria-labelledby="recent-posts-title">
+    <div class="admin-card-head">
+      <div>
+        <p class="admin-kicker">回到上次的内容</p>
+        <h2 id="recent-posts-title">最近笔记</h2>
+      </div>
+      <a class="btn-link" href="/{{ admin_path }}/posts">全部笔记</a>
+    </div>
+    {% if recent_posts %}
+    <ul class="recent-note-list">
+      {% for post in recent_posts %}
+      <li>
+        <div class="recent-note-copy">
+          <a href="/{{ admin_path }}/posts/{{ post.slug }}/edit">{{ post.title }}</a>
+          <time>{{ post.date }}</time>
+        </div>
+        <div class="recent-note-actions">
+          <span class="admin-badge {{ post.status_class }}">{{ post.status_label }}</span>
+          <a class="btn-link" href="/{{ admin_path }}/posts/{{ post.slug }}/edit">编辑</a>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="admin-empty-state">
+      <strong>还没有笔记</strong>
+      <p>创建第一篇笔记后，最近编辑的内容会显示在这里。</p>
+      <a class="btn btn-sm" href="/{{ admin_path }}/posts/new">新建第一篇笔记</a>
+    </div>
+    {% endif %}
+  </section>
 </div>
-<div class="stat-cards">
-  <div class="stat-card"><span>笔记</span><strong>{{ counts.posts }}</strong></div>
-  <div class="stat-card"><span>草稿</span><strong>{{ drafts|length }}</strong></div>
-  <div class="stat-card"><span>媒体</span><strong>{{ media_count }}</strong></div>
-</div>
-<div class="quick-actions">
-  <a class="btn btn-secondary btn-sm" href="/{{ admin_path }}/posts">笔记管理</a>
-  <a class="btn btn-secondary btn-sm" href="/{{ admin_path }}/posts?status=draft">草稿（{{ drafts|length }}）</a>
-  <a class="btn btn-secondary btn-sm" href="/{{ admin_path }}/media">媒体库</a>
-  <a class="btn btn-secondary btn-sm" href="/" target="_blank" rel="noopener">查看公开站</a>
-  <form method="post" action="/{{ admin_path }}/rebuild" data-busy>
-    <input type="hidden" name="_csrf" value="{{ csrf }}">
-    <button type="submit" class="btn btn-secondary btn-sm">全部重建</button>
-  </form>
-</div>
-<p class="build-info">最近构建：{{ last_build }}</p>
-{% if output_info %}
-<div class="admin-card build-card">
-  <h2>构建产物</h2>
-  <p>
-    大小 {{ output_info.size_mb }} MB · 文件 {{ output_info.file_count }} 个 ·
+
+<details class="admin-card admin-disclosure admin-runtime">
+  <summary>
+    <span class="admin-disclosure-title">站点运行状态</span>
     <span class="admin-badge {{ 'admin-badge--published' if output_info.ok else 'admin-badge--danger' }}">
-      {{ "完整" if output_info.ok else "有缺失" }}
+      {{ "构建完整" if output_info.ok else "构建待处理" }}
     </span>
-  </p>
-</div>
-{% endif %}
-{% if drafts %}
-<h2>草稿</h2>
-<ul class="draft-list">
-  {% for d in drafts[:5] %}
-  <li>
-    <a href="/{{ admin_path }}/posts/{{ d.slug }}/edit">{{ d.title }}</a>
-    <time>{{ d.date }}</time>
-  </li>
-  {% endfor %}
-</ul>
-{% endif %}
-{% if scheduled %}
-<h2>定时文章（{{ scheduled|length }}）</h2>
-<ul class="draft-list">
-  {% for d in scheduled[:5] %}
-  <li>
-    <a href="/{{ admin_path }}/posts/{{ d.slug }}/edit">{{ d.title }}</a>
-    <time>{{ d.date }}</time>
-  </li>
-  {% endfor %}
-</ul>
-{% endif %}
-<div class="admin-card build-card">
-  <h2>内容体检</h2>
-  <p>
-    <a href="/{{ admin_path }}/audit">严重 {{ audit_danger }} 项 · 提醒 {{ audit_warning }} 项</a>
-  </p>
-</div>
-{% if top_rows %}
-<h2>访问 TOP5</h2>
-<div class="stat-bars">
-  {% for r in top_rows %}
-  <div class="stat-bar-row">
-    <span class="stat-bar-label" title="{{ r.path }}">{{ r.path }}</span>
-    <span class="stat-bar"><i style="width: {{ r.pct }}%"></i></span>
-    <span class="stat-bar-value">{{ r.views }}</span>
+    <small>最近构建：{{ last_build }}</small>
+  </summary>
+  <div class="admin-disclosure-body">
+    <div class="runtime-grid">
+      <div class="runtime-fact">
+        <span>构建产物</span>
+        {% if output_info %}
+        <strong>{{ output_info.size_mb }} MB · {{ output_info.file_count }} 个文件</strong>
+        {% else %}
+        <strong>尚未生成</strong>
+        {% endif %}
+      </div>
+      <div class="runtime-fact">
+        <span>内容索引</span>
+        <strong><a href="/{{ admin_path }}/content-index">检查公开索引与小程序导出</a></strong>
+      </div>
+      <div class="runtime-fact">
+        <span>站点安全</span>
+        <strong><a href="/{{ admin_path }}/health">查看健康检查</a></strong>
+      </div>
+    </div>
+    <div class="quick-actions">
+      <a class="btn btn-secondary btn-sm" href="/" target="_blank" rel="noopener">查看公开站</a>
+      <a class="btn btn-secondary btn-sm" href="/{{ admin_path }}/media">管理媒体</a>
+      <form method="post" action="/{{ admin_path }}/rebuild" data-busy>
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <button type="submit" class="btn btn-secondary btn-sm">全部重建</button>
+      </form>
+    </div>
+    <p class="field-help">全量重建会重新生成公开页面、搜索索引和小程序导出，通常只需在排查异常时手动执行。</p>
   </div>
-  {% endfor %}
-</div>
-{% endif %}
-{% if trend %}
-<h2>7 日访问趋势</h2>
-<div class="stat-bars trend-bars">
-  {% for t in trend %}
-  <div class="stat-bar-row" title="{{ t.day }}：{{ t.total }} 次">
-    <span class="stat-bar-label">{{ t.day[5:] }}</span>
-    <span class="stat-bar"><i style="width: {{ t.pct }}%"></i></span>
-    <span class="stat-bar-value">{{ t.total }}</span>
+</details>
+
+<details class="admin-card admin-disclosure">
+  <summary>
+    <span class="admin-disclosure-title">访问数据与最近活动</span>
+    <small>统计、热门页面、操作记录</small>
+  </summary>
+  <div class="admin-disclosure-body">
+    {% if top_rows %}
+    <h3>访问 TOP5</h3>
+    <div class="stat-bars">
+      {% for r in top_rows %}
+      <div class="stat-bar-row">
+        <span class="stat-bar-label" title="{{ r.path }}">{{ r.path }}</span>
+        <span class="stat-bar"><i style="width: {{ r.pct }}%"></i></span>
+        <span class="stat-bar-value">{{ r.views }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <h3>7 日访问趋势</h3>
+    <div class="stat-bars trend-bars">
+      {% for t in trend %}
+      <div class="stat-bar-row" title="{{ t.day }}：{{ t.total }} 次">
+        <span class="stat-bar-label">{{ t.day[5:] }}</span>
+        <span class="stat-bar"><i style="width: {{ t.pct }}%"></i></span>
+        <span class="stat-bar-value">{{ t.total }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if recent_activity %}
+    <h3>最近活动</h3>
+    <ul class="draft-list">
+      {% for r in recent_activity %}
+      <li>
+        <span class="admin-tag admin-tag--muted">{{ r["kind"] }}</span>
+        {{ r["detail"] }}
+        <time>{{ r["at"] }}</time>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <h3>访问统计（最近）</h3>
+    {% with table = stats_table %}{% include "partials/table.html" %}{% endwith %}
   </div>
-  {% endfor %}
-</div>
-{% endif %}
-{% if recent_posts %}
-<h2>最近文章</h2>
-{% with table = recent_table %}{% include "partials/table.html" %}{% endwith %}
-{% endif %}
-{% if recent_activity %}
-<h2>最近活动</h2>
-<ul class="draft-list">
-  {% for r in recent_activity %}
-  <li>
-    <span class="admin-tag admin-tag--muted">{{ r["kind"] }}</span>
-    {{ r["detail"] }}
-    <time>{{ r["at"] }}</time>
-  </li>
-  {% endfor %}
-</ul>
-{% endif %}
-<h2>访问统计（最近）</h2>
-{% with table = stats_table %}{% include "partials/table.html" %}{% endwith %}
+</details>
 {% endblock %}

@@ -2,7 +2,7 @@
 {% block title %}回收站 · Li&Notes 后台{% endblock %}
 {% block content %}
 <nav class="admin-breadcrumb" aria-label="面包屑">
-  <a href="/{{ admin_path }}/">仪表盘</a>
+  <a href="/{{ admin_path }}/">工作台</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <span aria-current="page">回收站</span>
 </nav>
@@ -12,7 +12,7 @@
   <form method="post" action="/{{ admin_path }}/trash/empty" data-busy
         data-confirm="确定清空回收站？此操作不可恢复。">
     <input type="hidden" name="_csrf" value="{{ csrf }}">
-    <button type="submit" class="btn btn-secondary btn-sm">清空回收站</button>
+    <button type="submit" class="btn btn-danger btn-sm">清空回收站</button>
   </form>
   {% endif %}
 </div>
