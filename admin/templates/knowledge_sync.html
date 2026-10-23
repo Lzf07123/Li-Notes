@@ -25,14 +25,11 @@
 
 <div class="admin-card">
   <h2>自动刮削设置</h2>
-  <p>
-    功能
-    <span class="admin-badge {{ 'admin-badge--published' if report.config.auto_scrape.enabled else 'admin-badge--danger' }}">
-      {{ "已开启" if report.config.auto_scrape.enabled else "已关闭" }}
-    </span>
-    · 语言 {{ report.config.auto_scrape.include_languages|join(" / ") }}
-    · 命令表最多 {{ report.config.auto_scrape.max_items_per_article }} 条/篇
-  </p>
+  <ul class="sync-facts">
+    <li><span>自动刮削</span><strong><span class="admin-badge {{ 'admin-badge--published' if report.config.auto_scrape.enabled else 'admin-badge--danger' }}">{{ "已开启" if report.config.auto_scrape.enabled else "已关闭" }}</span></strong></li>
+    <li><span>代码语言</span><strong>{{ report.config.auto_scrape.include_languages|join(" / ") }}</strong></li>
+    <li><span>命令表上限</span><strong>{{ report.config.auto_scrape.max_items_per_article }} 条/篇</strong></li>
+  </ul>
   <p class="field-help">手写 <code>mini_json</code> 或已经回填的配置优先于自动候选；文章显式写 <code>{"enabled": false}</code> 时永不覆盖。</p>
 </div>
 
@@ -41,16 +38,16 @@
 <form method="post" action="/{{ admin_path }}/knowledge-sync/persist">
   <input type="hidden" name="_csrf" value="{{ csrf }}">
   <div class="table-shell-wrap">
-    <table class="table-shell">
+    <table class="table-shell table-shell--cards">
       <thead><tr><th><button type="button" class="btn-link" data-select-group="auto-records">全选</button></th><th>文章</th><th>分类</th><th>条目</th><th>候选</th></tr></thead>
       <tbody>
         {% for record in records_by_status.auto %}
         <tr>
-          <td><input type="checkbox" name="slugs" value="{{ record.slug }}" data-select-item="auto-records" aria-label="选择 {{ record.title }}"></td>
-          <td><a href="/{{ admin_path }}/posts/{{ record.slug }}/edit">{{ record.title }}</a><br><small>{{ record.slug }}</small></td>
-          <td>{{ record.category }}</td>
-          <td>{{ record.item_count }}</td>
-          <td>
+          <td data-label="选择"><input type="checkbox" name="slugs" value="{{ record.slug }}" data-select-item="auto-records" aria-label="选择 {{ record.title }}"></td>
+          <td class="knowledge-source-cell" data-label="文章"><a href="/{{ admin_path }}/posts/{{ record.slug }}/edit">{{ record.title }}</a><small>{{ record.slug }}</small></td>
+          <td data-label="分类">{{ record.category }}</td>
+          <td data-label="条目">{{ record.item_count }}</td>
+          <td class="knowledge-candidate-cell" data-label="候选">
             {% for item in record["items"][:3] %}
             <small><strong>{{ item.title }}</strong> · <code>{{ item.command }}</code></small>{% if not loop.last %}<br>{% endif %}
             {% endfor %}
@@ -73,15 +70,15 @@
 <form method="post" action="/{{ admin_path }}/knowledge-sync/persist">
   <input type="hidden" name="_csrf" value="{{ csrf }}">
   <div class="table-shell-wrap">
-    <table class="table-shell">
+    <table class="table-shell table-shell--cards">
       <thead><tr><th><button type="button" class="btn-link" data-select-group="generated-records">全选</button></th><th>文章</th><th>分类</th><th>条目</th></tr></thead>
       <tbody>
         {% for record in records_by_status.generated %}
         <tr>
-          <td><input type="checkbox" name="slugs" value="{{ record.slug }}" data-select-item="generated-records" aria-label="选择 {{ record.title }}"></td>
-          <td><a href="/{{ admin_path }}/posts/{{ record.slug }}/edit">{{ record.title }}</a><br><small>{{ record.slug }}</small></td>
-          <td>{{ record.category }}</td>
-          <td>{{ record.item_count }}</td>
+          <td data-label="选择"><input type="checkbox" name="slugs" value="{{ record.slug }}" data-select-item="generated-records" aria-label="选择 {{ record.title }}"></td>
+          <td class="knowledge-source-cell" data-label="文章"><a href="/{{ admin_path }}/posts/{{ record.slug }}/edit">{{ record.title }}</a><small>{{ record.slug }}</small></td>
+          <td data-label="分类">{{ record.category }}</td>
+          <td data-label="条目">{{ record.item_count }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -97,11 +94,11 @@
 {% if records_by_status.manual %}
 <h2>手写速查</h2>
 <div class="table-shell-wrap">
-  <table class="table-shell">
+  <table class="table-shell table-shell--cards">
     <thead><tr><th>文章</th><th>分类</th><th>条目</th></tr></thead>
     <tbody>
       {% for record in records_by_status.manual %}
-      <tr><td><a href="/{{ admin_path }}/posts/{{ record.slug }}/edit">{{ record.title }}</a></td><td>{{ record.category }}</td><td>{{ record.item_count }}</td></tr>
+      <tr><td class="knowledge-source-cell" data-label="文章"><a href="/{{ admin_path }}/posts/{{ record.slug }}/edit">{{ record.title }}</a></td><td data-label="分类">{{ record.category }}</td><td data-label="条目">{{ record.item_count }}</td></tr>
       {% endfor %}
     </tbody>
   </table>

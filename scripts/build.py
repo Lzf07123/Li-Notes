@@ -33,6 +33,7 @@ FINGERPRINT_FILES = {
     "js.admin_dropdown": "themes/blog-theme/static/js/admin-dropdown.js",
     "js.nav_menu": "themes/blog-theme/static/js/nav-menu.js",
     "js.back_to_top": "themes/blog-theme/static/js/back-to-top.js",
+    "js.responsive_tables": "themes/blog-theme/static/js/responsive-tables.js",
 }
 
 

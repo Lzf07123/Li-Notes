@@ -8,7 +8,8 @@
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <span aria-current="page">{{ slug or "新建" }}</span>
 </nav>
-<h1>{{ label }}{% if slug %}: {{ slug }}{% endif %}</h1>
+<h1>{{ "编辑" if slug else "新建" }}{{ label }}</h1>
+{% if slug %}<p class="field-help editor-slug">标识：<code>{{ slug }}</code></p>{% endif %}
 {% if error %}<p class="flash flash--error" role="alert">{{ error }}</p>{% endif %}
 <p id="draft-restore" class="flash" role="status" hidden>
   检测到未保存的草稿

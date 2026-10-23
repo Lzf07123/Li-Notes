@@ -61,7 +61,7 @@
 <div class="admin-card">
   <h2>构建状态</h2>
   <p>
-    最近构建 {{ latest_build.built_at or "尚未构建" }} ·
+    最近构建 {{ (latest_build.built_at or "尚未构建").replace("T", " ")[:16] }} ·
     {{ latest_build.asset_count }} 个静态资源指纹
   </p>
   <p>
@@ -75,15 +75,15 @@
 <h2>最近索引记录</h2>
 {% if public_entries %}
 <div class="table-shell-wrap">
-  <table class="table-shell">
+  <table class="table-shell table-shell--cards">
     <thead><tr><th>标题</th><th>日期</th><th>标签</th><th>链接</th></tr></thead>
     <tbody>
       {% for entry in public_entries %}
       <tr>
-        <td>{{ entry.title }}</td>
-        <td>{{ entry.date }}</td>
-        <td>{{ (entry.tags or [])|join(" · ") }}</td>
-        <td><a href="{{ entry.url }}" target="_blank" rel="noopener">打开</a></td>
+        <td data-label="标题">{{ entry.title }}</td>
+        <td data-label="日期">{{ entry.date }}</td>
+        <td data-label="标签">{{ (entry.tags or [])|join(" · ") }}</td>
+        <td data-label="链接"><a href="{{ entry.url }}" target="_blank" rel="noopener">打开</a></td>
       </tr>
       {% endfor %}
     </tbody>

@@ -38,6 +38,10 @@
       <p class="auth-aside-note">仅管理员可访问</p>
     </aside>
     <section class="auth-panel">
+      <div class="auth-mobile-brand">
+        {% if brand.logo %}<img class="auth-logo-img" src="{{ brand.logo }}" alt="" aria-hidden="true">{% else %}<span class="auth-logo" aria-hidden="true">{{ brand.name[:1] }}</span>{% endif %}
+        <span>{{ brand.name }}</span>
+      </div>
       <div class="auth-theme-row">
         <button id="auth-theme-toggle" class="btn btn-sm btn-ghost" type="button">深浅色</button>
       </div>

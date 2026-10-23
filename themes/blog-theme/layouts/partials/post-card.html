@@ -13,10 +13,10 @@
     <img class="post-cover" src="{{ . | relURL }}" alt="" loading="lazy" decoding="async"{{ with $w }} width="{{ . }}"{{ end }}{{ with $h }} height="{{ . }}"{{ end }}{{ if and $w $h }} style="--cover-ratio: {{ $w }} / {{ $h }}"{{ end }}>
   </a>
   {{ end }}
+  {{ if $p.Params.pinned }}<p class="post-card-kicker"><span class="badge badge-pinned">{{ $strings.common.pinned }}</span></p>{{ end }}
   {{ if eq $level 3 }}<h3>
   {{ else }}<h2>
   {{ end }}
-    {{ if $p.Params.pinned }}<span class="badge badge-pinned">{{ $strings.common.pinned }}</span>{{ end }}
     <a href="{{ $p.RelPermalink }}">{{ $p.Title }}</a>
   {{ if eq $level 3 }}</h3>{{ else }}</h2>{{ end }}
   <p class="meta">
