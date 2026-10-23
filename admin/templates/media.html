@@ -1,9 +1,18 @@
 {% extends "base.html" %}
 {% block title %}媒体库 · Li&Notes 后台{% endblock %}
 {% block content %}
-<div class="list-head">
-  <h1>媒体库（{{ items|length }}）</h1>
-</div>
+<nav class="admin-breadcrumb" aria-label="面包屑">
+  <a href="/{{ admin_path }}/">工作台</a>
+  <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
+  <span aria-current="page">媒体库</span>
+</nav>
+<header class="admin-page-head">
+  <div class="admin-page-heading">
+    <p class="admin-kicker">写作素材</p>
+    <h1>媒体库<span class="admin-title-count">{{ items|length }}</span></h1>
+    <p class="admin-page-subtitle">上传文章封面与正文图片。系统会压缩过大的图片，并标出未引用的素材。</p>
+  </div>
+</header>
 <div class="stat-cards">
   <div class="stat-card"><span>图片总数</span><strong>{{ items|length }}</strong></div>
   <div class="stat-card"><span>占用空间</span><strong>{{ (total_size / 1024 / 1024)|round(2) }} MB</strong></div>
@@ -25,8 +34,11 @@
 {% endif %}
 <form id="upload-form" class="upload-box" data-busy>
   <input type="hidden" name="_csrf" value="{{ csrf }}">
-  <input type="file" name="file" accept=".png,.jpg,.jpeg,.gif,.webp,.avif" multiple required>
-  <button type="submit" class="btn btn-sm">上传</button>
+  <label class="upload-file-input">
+    <span class="visually-hidden">选择图片</span>
+    <input type="file" name="file" accept=".png,.jpg,.jpeg,.gif,.webp,.avif" multiple required>
+  </label>
+  <button type="submit" class="btn btn-primary btn-sm">上传</button>
   <small>支持多选；png / jpg / webp / gif / avif，单张 ≤ 5MB；尺寸或体积过大时自动压缩到 1600px 内。上传后需保存文章或手动重建才会出现在公开站。</small>
 </form>
 <div id="upload-progress" class="upload-progress-panel" hidden>

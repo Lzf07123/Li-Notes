@@ -2,135 +2,220 @@
 {% block title %}{{ label }} · Li&Notes 后台{% endblock %}
 {% block content %}
 <nav class="admin-breadcrumb" aria-label="面包屑">
-  <a href="/{{ admin_path }}/">仪表盘</a>
+  <a href="/{{ admin_path }}/">工作台</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <a href="/{{ admin_path }}/posts">{{ label }}</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <span aria-current="page">{{ slug or "新建" }}</span>
 </nav>
-<h1>{{ "编辑" if slug else "新建" }}{{ label }}</h1>
-{% if slug %}<p class="field-help editor-slug">标识：<code>{{ slug }}</code></p>{% endif %}
+{% set editor_status = namespace(value="published") %}
+{% for field in fields %}
+  {% if field[0] == "status" %}{% set editor_status.value = field[3] %}{% endif %}
+{% endfor %}
+<header class="admin-page-head editor-page-head">
+  <div class="admin-page-heading">
+    <p class="admin-kicker">{{ "修改现有内容" if slug else "创建新内容" }}</p>
+    <h1>{{ "编辑笔记" if slug else "新建笔记" }}</h1>
+    <p class="admin-page-subtitle">
+      {% if slug %}
+      标识：<code>{{ slug }}</code> · 状态：<span id="editor-status-label">{{ status_labels.get(editor_status.value, editor_status.value) }}</span>
+      {% else %}
+      先填写标题和正文；摘要、标签和封面可以在右侧按需补充。
+      {% endif %}
+    </p>
+  </div>
+  <div class="admin-page-actions editor-top-actions">
+    <span id="editor-save-state" class="editor-save-state" aria-live="polite">{{ "已保存" if slug else "尚未保存" }}</span>
+    <a class="btn btn-ghost" href="/{{ admin_path }}/posts">返回列表</a>
+    <button type="submit" form="edit-form" name="action" value="save_stay" class="btn btn-primary">保存笔记</button>
+  </div>
+</header>
 {% if error %}<p class="flash flash--error" role="alert">{{ error }}</p>{% endif %}
 <p id="draft-restore" class="flash" role="status" hidden>
   检测到未保存的草稿
   <button id="draft-restore-btn" type="button" class="btn-link">恢复</button>
   <button id="draft-discard-btn" type="button" class="btn-link">丢弃</button>
 </p>
-<div class="editor-layout">
-  <div class="editor-main">
-    <form id="edit-form" method="post" action="/{{ admin_path }}/{{ section }}/save">
-      <input type="hidden" name="_csrf" value="{{ csrf }}">
-      <input type="hidden" name="slug" value="{{ slug }}">
+
+{% macro render_editor_field(field) %}
+  {% set name, label, ftype, value = field[0], field[1], field[2], field[3] %}
+  {% if ftype == "checkbox" %}
+  <label class="admin-field admin-checkbox-field">
+    <input type="checkbox" name="{{ name }}" value="1" {% if value %}checked{% endif %}>
+    <span>{{ label }}</span>
+  </label>
+  {% else %}
+  <label class="admin-field admin-field--{{ name }}">
+    <span class="admin-field-label">{{ label }}</span>
+    {% if ftype == "select" %}
+      <select name="{{ name }}" data-custom-dropdown>
+        {% for option in field[4] %}
+        <option value="{{ option }}" {% if option == value %}selected{% endif %}>{{ status_labels.get(option, option) }}</option>
+        {% endfor %}
+      </select>
+    {% elif ftype == "textarea" %}
+      <textarea name="{{ name }}" rows="{{ 10 if name == 'mini_config' else 3 }}"
+                class="{{ 'mono' if name == 'mini_config' else '' }}">{{ value }}</textarea>
+    {% else %}
+      <input type="{{ 'date' if name == 'date' else 'text' }}" name="{{ name }}" value="{{ value }}"
+             {% if name == "title" %}required{% endif %}
+             {% if name == "title" %}aria-describedby="title-hint"{% endif %}
+             {% if name == "title" and not slug %}autofocus{% endif %}
+             {% if name == "tags" %}list="tag-options"{% endif %}>
+    {% endif %}
+    {% if name == "date" %}<small class="field-help">公开站按这个日期排序和归档。</small>{% endif %}
+    {% if name == "tags" %}<small class="field-help">用逗号分隔多个标签，例如 linux, docker。</small>{% endif %}
+    {% if name == "summary" %}<small class="field-help">用于列表摘要和搜索描述，建议一句话说明文章解决什么问题。</small>{% endif %}
+    {% if name == "cover" %}<small class="field-help">可选。路径以 /img/ 开头，也可以从媒体库选择。</small>{% endif %}
+    {% if name == "mini_config" %}<small class="field-help">JSON 格式。enabled 为 true 时导出到小程序；保存时会校验分类、标签、示例和引用关系。</small>{% endif %}
+  </label>
+  {% if name == "cover" %}
+  <button type="button" class="btn btn-sm btn-secondary" id="cover-pick">从媒体库选择封面</button>
+  {% endif %}
+  {% endif %}
+{% endmacro %}
+
+<form id="edit-form" class="editor-form" method="post" action="/{{ admin_path }}/{{ section }}/save">
+  <input type="hidden" name="_csrf" value="{{ csrf }}">
+  <input type="hidden" name="slug" value="{{ slug }}">
+  <div class="editor-layout">
+    <div class="editor-main">
+      <section class="admin-card editor-document" aria-labelledby="editor-document-title">
+        <div class="admin-card-head editor-document-head">
+          <div>
+            <p class="admin-kicker">正文</p>
+            <h2 id="editor-document-title">写下今天的内容</h2>
+          </div>
+          <span class="admin-badge {{ 'admin-badge--published' if editor_status.value == 'published' else 'admin-badge--draft' }}">
+            {{ status_labels.get(editor_status.value, editor_status.value) }}
+          </span>
+        </div>
+        {% for field in fields if field[0] == "title" %}
+          {{ render_editor_field(field) }}
+        {% endfor %}
+        <small id="title-hint" class="field-help" role="status" hidden></small>
       {% if not slug %}
-      <label>标识（slug，新建时必填，小写字母数字与连字符）
-        <input type="text" name="new_slug" required pattern="[a-z0-9][a-z0-9-]{0,63}">
-      </label>
-      <small id="slug-hint" class="field-help" role="status"></small>
-      {% endif %}
-      {% for field in fields %}
-        {% set name, label, ftype, value = field[0], field[1], field[2], field[3] %}
-        <label>{{ label }}
-          {% if ftype == "select" %}
-            <select name="{{ name }}" data-custom-dropdown>
-              {% for option in field[4] %}
-              <option value="{{ option }}" {% if option == value %}selected{% endif %}>{{ option }}</option>
-              {% endfor %}
-            </select>
-          {% elif ftype == "checkbox" %}
-            <input type="checkbox" name="{{ name }}" value="1" {% if value %}checked{% endif %}>
-          {% elif ftype == "textarea" %}
-            <textarea name="{{ name }}" rows="{{ 14 if name == 'mini_config' else 3 }}" class="{{ 'mono' if name == 'mini_config' else '' }}">{{ value }}</textarea>
-            {% if name == "mini_config" %}
-            <small class="field-help">JSON 格式。enabled 为 true 时会由构建导出到小程序；保存时会校验分类、标签、示例和引用关系。</small>
-            {% endif %}
-          {% else %}
-            <input type="text" name="{{ name }}" value="{{ value }}"{% if name == "tags" %} list="tag-options"{% endif %}>
-          {% endif %}
+        <label class="admin-field admin-field--new_slug">
+          <span class="admin-field-label">页面标识（slug）</span>
+          <input type="text" name="new_slug" required pattern="[a-z0-9][a-z0-9-]{0,63}"
+                 placeholder="例如 kubernetes-basics" aria-describedby="slug-hint">
+          <small id="slug-hint" class="field-help" role="status">根据标题自动生成；只用小写字母、数字和连字符。</small>
         </label>
-        {% if name == "cover" %}
-        <button type="button" class="btn btn-sm btn-secondary" id="cover-pick">从媒体库选择封面</button>
-        {% endif %}
-      {% endfor %}
-      <small id="title-hint" class="field-help" role="status" hidden></small>
+      {% endif %}
       {% if all_tags %}
       <datalist id="tag-options">
         {% for t in all_tags %}<option value="{{ t }}"></option>{% endfor %}
       </datalist>
       {% endif %}
-      <div>
-      <label>正文 Markdown
-        <div class="editor-toolbar">
-          <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="bold" title="加粗">B</button>
-          <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="italic" title="斜体"><em>I</em></button>
-          <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="h2" title="标题">H2</button>
-          <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="link" title="链接">链接</button>
-          <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="code" title="行内代码">&lt;/&gt;</button>
-          <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="quote" title="引用">引用</button>
-          <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="list" title="列表">列表</button>
-          <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="table" title="插入表格">表格</button>
-          <button type="button" id="insert-image" class="btn btn-sm btn-secondary">插入图片</button>
-          <button type="button" id="editor-fullscreen" class="btn btn-sm btn-secondary">全屏</button>
-          <button type="button" id="shortcuts-help" class="btn btn-sm btn-secondary" aria-keyshortcuts="?">快捷键</button>
-          <span id="body-count" class="editor-count"></span>
-          <span id="upload-progress-inline" class="upload-progress-inline" hidden><i id="upload-progress-inline-bar" class="upload-progress-bar"></i></span>
+
+        <div class="admin-field editor-body-field">
+          <div class="editor-body-label">
+            <label class="admin-field-label" for="body">正文 Markdown</label>
+            <small class="field-help">图片可直接拖入正文，会自动上传并插入。</small>
+          </div>
+          <div class="editor-toolbar" role="toolbar" aria-label="Markdown 编辑工具">
+            <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="bold" title="加粗" aria-label="加粗">B</button>
+            <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="italic" title="斜体" aria-label="斜体"><em>I</em></button>
+            <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="h2" title="二级标题" aria-label="二级标题">H2</button>
+            <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="link" title="插入链接" aria-label="插入链接">链接</button>
+            <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="code" title="行内代码" aria-label="行内代码">&lt;/&gt;</button>
+            <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="quote" title="引用" aria-label="引用">引用</button>
+            <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="list" title="无序列表" aria-label="无序列表">列表</button>
+            <button type="button" class="btn btn-sm btn-secondary md-btn" data-md="table" title="插入表格" aria-label="插入表格">表格</button>
+            <button type="button" id="insert-image" class="btn btn-sm btn-secondary">插入图片</button>
+            <button type="button" id="editor-fullscreen" class="btn btn-sm btn-secondary">全屏</button>
+            <button type="button" id="shortcuts-help" class="btn btn-sm btn-secondary" aria-keyshortcuts="?">快捷键</button>
+            <span id="body-count" class="editor-count" aria-live="polite"></span>
+            <span id="upload-progress-inline" class="upload-progress-inline" hidden><i id="upload-progress-inline-bar" class="upload-progress-bar"></i></span>
+          </div>
+          <textarea id="body" name="body" rows="24" class="mono" spellcheck="true">{{ body or "" }}</textarea>
         </div>
-        <small class="field-help">支持把图片直接拖进正文，会自动上传并插入。</small>
-        <textarea id="body" name="body" rows="24" class="mono">{{ body or "" }}</textarea>
-      </label>
-      </div>
+      </section>
       <div class="form-actions editor-actions">
-        <button type="submit" name="action" value="save_stay" class="btn" aria-keyshortcuts="Control+S">保存（留在本页）</button>
+        <button type="submit" name="action" value="save_stay" class="btn btn-primary" aria-keyshortcuts="Control+S">保存笔记</button>
         <button type="submit" name="action" value="save" class="btn btn-secondary">保存并返回列表</button>
         <button type="submit" name="action" value="preview_raw" class="btn btn-ghost" id="preview-btn">生成预览</button>
       </div>
-    </form>
-  </div>
-  <aside class="editor-preview">
-    <div class="editor-preview-head">
-      <span>Hugo 预览</span>
-      <span class="preview-devices" role="group" aria-label="预览宽度">
-        <button type="button" class="is-active" data-preview-width="100%">桌面</button>
-        <button type="button" data-preview-width="768px">平板</button>
-        <button type="button" data-preview-width="390px">手机</button>
-      </span>
-      {% if preview_path %}
-      <a id="preview-open" class="btn-link" href="/{{ admin_path }}{{ preview_path }}?raw=1" target="_blank" rel="noopener">新窗口打开</a>
-      {% endif %}
     </div>
-    <p id="preview-loading" class="flash preview-loading" hidden>正在生成预览…</p>
-    <iframe id="preview-frame" name="preview-frame" title="Hugo 预览" class="preview-frame"></iframe>
-    {% if seo %}
-    <div class="seo-panel">
-      <p class="editor-preview-head">SEO 检查</p>
-      <ul class="seo-list">
-        <li class="{{ 'ok' if seo.title_ok else 'warn' }}">标题 {{ seo.title_len }} 字（10–60 最佳）</li>
-        <li class="{{ 'ok' if seo.has_summary else 'warn' }}">{{ "已填摘要" if seo.has_summary else "缺少摘要" }}</li>
-        <li class="{{ 'ok' if seo.has_tags else 'warn' }}">{{ "已有标签" if seo.has_tags else "缺少标签" }}</li>
-        <li class="{{ 'ok' if seo.has_cover else 'warn' }}">{{ "已有封面" if seo.has_cover else "无封面（可选）" }}</li>
-        <li class="{{ 'ok' if seo.slug_ok else 'warn' }}">{{ "标识合法" if seo.slug_ok else "标识待填/非法" }}</li>
-        <li>正文字数约 {{ seo.word_count }} 词</li>
-        {% if seo.days_until and seo.days_until > 0 %}<li class="warn">距定时发布还有 {{ seo.days_until }} 天</li>{% endif %}
-      </ul>
-    </div>
-    {% endif %}
-    {% if revisions %}
-    <div class="revision-list">
-      <p class="editor-preview-head">修订历史（最近 {{ revisions|length }} 份）</p>
-      <ul>
-        {% for rev in revision_display[:10] %}
-        <li>
-          <a href="/{{ admin_path }}/posts/{{ slug }}/revisions/{{ rev.ts }}" target="_blank" rel="noopener">{{ rev.label }}</a>
-          <form method="post" action="/{{ admin_path }}/posts/{{ slug }}/revisions/{{ rev.ts }}/restore" data-busy>
-            <input type="hidden" name="_csrf" value="{{ csrf }}">
-            <button type="submit" class="btn-link">恢复</button>
-          </form>
-        </li>
+
+    <aside class="editor-aside" aria-label="发布和预览设置">
+      <section class="admin-card editor-settings" aria-labelledby="publish-settings-title">
+        <div class="admin-card-head">
+          <div>
+            <p class="admin-kicker">发布设置</p>
+            <h2 id="publish-settings-title">内容信息</h2>
+          </div>
+        </div>
+        <div class="admin-form-grid">
+          {% for field in fields if field[0] in ["date", "status"] %}
+            {{ render_editor_field(field) }}
+          {% endfor %}
+        </div>
+        {% for field in fields if field[0] in ["tags", "summary", "cover", "pinned"] %}
+          {{ render_editor_field(field) }}
         {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
-  </aside>
-</div>
+        {% for field in fields if field[0] == "mini_config" %}
+        <details class="editor-advanced">
+          <summary>小程序速查配置（可选）</summary>
+          {{ render_editor_field(field) }}
+        </details>
+        {% endfor %}
+      </section>
+
+      <section class="admin-card editor-preview" aria-labelledby="preview-title">
+        <div class="editor-preview-head">
+          <h2 id="preview-title">Hugo 预览</h2>
+          <span class="preview-devices" role="group" aria-label="预览宽度">
+            <button type="button" class="is-active" data-preview-width="100%">桌面</button>
+            <button type="button" data-preview-width="768px">平板</button>
+            <button type="button" data-preview-width="390px">手机</button>
+          </span>
+          {% if preview_path %}
+          <a id="preview-open" class="btn-link" href="/{{ admin_path }}{{ preview_path }}?raw=1" target="_blank" rel="noopener">新窗口打开</a>
+          {% endif %}
+        </div>
+        <p id="preview-loading" class="flash preview-loading" hidden>正在生成预览…</p>
+        <div class="preview-stage">
+          <div id="preview-placeholder" class="preview-placeholder">
+            <strong>预览会显示在这里</strong>
+            <span>完成正文后点击“生成预览”，查看真实 Hugo 排版。</span>
+          </div>
+          <iframe id="preview-frame" name="preview-frame" title="Hugo 预览" class="preview-frame"></iframe>
+        </div>
+        {% if seo %}
+        <details class="seo-panel editor-advanced">
+          <summary>发布检查</summary>
+          <ul class="seo-list">
+            <li class="{{ 'ok' if seo.title_ok else 'warn' }}">标题 {{ seo.title_len }} 字（10–60 最佳）</li>
+            <li class="{{ 'ok' if seo.has_summary else 'warn' }}">{{ "已填摘要" if seo.has_summary else "缺少摘要" }}</li>
+            <li class="{{ 'ok' if seo.has_tags else 'warn' }}">{{ "已有标签" if seo.has_tags else "缺少标签" }}</li>
+            <li class="{{ 'ok' if seo.has_cover else 'warn' }}">{{ "已有封面" if seo.has_cover else "无封面（可选）" }}</li>
+            <li class="{{ 'ok' if seo.slug_ok else 'warn' }}">{{ "标识合法" if seo.slug_ok else "标识待填/非法" }}</li>
+            <li>正文字数约 {{ seo.word_count }} 词</li>
+            {% if seo.days_until and seo.days_until > 0 %}<li class="warn">距定时发布还有 {{ seo.days_until }} 天</li>{% endif %}
+          </ul>
+        </details>
+        {% endif %}
+        {% if revisions %}
+        <details class="revision-list editor-advanced">
+          <summary>修订历史（最近 {{ revisions|length }} 份）</summary>
+          <ul>
+            {% for rev in revision_display[:10] %}
+            <li>
+              <a href="/{{ admin_path }}/posts/{{ slug }}/revisions/{{ rev.ts }}" target="_blank" rel="noopener">{{ rev.label }}</a>
+              <form method="post" action="/{{ admin_path }}/posts/{{ slug }}/revisions/{{ rev.ts }}/restore" data-busy>
+                <input type="hidden" name="_csrf" value="{{ csrf }}">
+                <button type="submit" class="btn-link">恢复</button>
+              </form>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+      </section>
+    </aside>
+  </div>
+</form>
 
 <dialog id="image-dialog" class="media-dialog">
   <form method="dialog">
@@ -189,6 +274,15 @@
     var DRAFT_KEY = "linotes-draft:" + "{{ section }}" + ":" + ("{{ slug }}" || "__new__");
     var slugInput = form.querySelector('input[name="new_slug"]');
     var titleInput = form.querySelector('input[name="title"]');
+    var statusInput = form.querySelector('select[name="status"]');
+    var saveState = document.getElementById("editor-save-state");
+    var statusLabel = document.getElementById("editor-status-label");
+    var statusBadge = document.querySelector(".editor-document-head .admin-badge");
+    var previewPlaceholder = document.getElementById("preview-placeholder");
+    var previewFrame = document.getElementById("preview-frame");
+    var previewRequested = false;
+    var submitting = false;
+    var cleanStateLabel = {{ ("已保存" if slug else "尚未保存")|tojson }};
     var slugAuto = false;
     var POST_TITLES = {{ post_titles | tojson }};
     if (slugInput && titleInput) {
@@ -444,8 +538,15 @@
 
     document.getElementById("preview-btn").addEventListener("click", function (e) {
       e.preventDefault();
+      previewRequested = true;
       var loading = document.getElementById("preview-loading");
       loading.hidden = false;
+      if (previewPlaceholder) {
+        previewPlaceholder.hidden = false;
+        previewPlaceholder.classList.add("is-loading");
+        previewPlaceholder.querySelector("strong").textContent = "正在生成预览";
+        previewPlaceholder.querySelector("span").textContent = "Hugo 正在渲染当前内容，请稍候。";
+      }
       window.setTimeout(function () { loading.hidden = true; }, 15000);
       var input = document.createElement("input");
       input.type = "hidden";
@@ -456,6 +557,60 @@
       form.submit();
       form.target = "_self";
       form.removeChild(input);
+    });
+
+    if (previewFrame) {
+      previewFrame.addEventListener("load", function () {
+        if (!previewRequested) return;
+        previewRequested = false;
+        var loading = document.getElementById("preview-loading");
+        if (loading) loading.hidden = true;
+        if (previewPlaceholder) previewPlaceholder.hidden = true;
+      });
+    }
+
+    function updateStatusBadge() {
+      if (!statusInput) return;
+      var published = statusInput.value === "published";
+      if (statusBadge) {
+        statusBadge.textContent = published ? "已发布" : "草稿";
+        statusBadge.classList.toggle("admin-badge--published", published);
+        statusBadge.classList.toggle("admin-badge--draft", !published);
+      }
+      if (statusLabel) statusLabel.textContent = published ? "已发布" : "草稿";
+    }
+    if (statusInput) statusInput.addEventListener("change", updateStatusBadge);
+
+    function serializeForm() {
+      var parts = [];
+      Array.prototype.forEach.call(form.elements, function (element) {
+        if (!element.name || element.disabled || element.type === "file") return;
+        if ((element.type === "checkbox" || element.type === "radio") && !element.checked) return;
+        parts.push(element.name + "=" + element.value);
+      });
+      return parts.join("\u0001");
+    }
+
+    var baseline = serializeForm();
+    function markDirty() {
+      if (!saveState || submitting) return;
+      var changed = serializeForm() !== baseline;
+      saveState.textContent = changed ? "有未保存更改" : cleanStateLabel;
+      saveState.classList.toggle("is-dirty", changed);
+    }
+    form.addEventListener("input", markDirty);
+    form.addEventListener("change", markDirty);
+    form.addEventListener("submit", function () {
+      submitting = true;
+      if (saveState) {
+        saveState.textContent = "正在保存…";
+        saveState.classList.remove("is-dirty");
+      }
+    });
+    window.addEventListener("beforeunload", function (event) {
+      if (submitting || serializeForm() === baseline) return;
+      event.preventDefault();
+      event.returnValue = "";
     });
 
     window.addEventListener("storage", function (e) {

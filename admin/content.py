@@ -189,6 +189,7 @@ def list_markdown(
                 "href": fm.get("href", ""),
                 "description": fm.get("description", ""),
                 "weight": fm.get("weight", 0),
+                "mtime": p.stat().st_mtime,
             }
         )
     if q:

@@ -74,6 +74,15 @@ class AdminRoutesTest(unittest.TestCase):
         self.assertIn("samesite=lax", cookie)
         self.assertIn("path=/admin", cookie)
 
+    def test_login_brand_logo_uses_admin_static_mount(self):
+        (settings.config_root / "brand.yaml").write_text(
+            "name: Li&Notes\nlogo: /assets/brand/logo.jpeg\n", encoding="utf-8"
+        )
+        with TestClient(app) as client:
+            r = client.get("/admin/login")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('src="/admin/static/assets/brand/logo.jpeg"', r.text)
+
     def test_preview_out_requires_login(self):
         target = settings.preview_root / "posts" / "draft" / "index.html"
         target.parent.mkdir(parents=True)
@@ -620,6 +629,83 @@ class AdminRoutesTest(unittest.TestCase):
             self.assertIn("内容体检", r.text)
             self.assertIn("定时文章", r.text)
             self.assertIn("未来文章", r.text)
+
+    def test_dashboard_prioritizes_next_note_and_current_location(self):
+        store.write_markdown(
+            "posts",
+            "older-note",
+            {"title": "较早的笔记", "date": "2026-08-18", "status": "published"},
+            "正文",
+        )
+        store.write_markdown(
+            "posts",
+            "latest-note",
+            {"title": "最近编辑的笔记", "date": "2026-08-19", "status": "draft"},
+            "正文",
+        )
+        older = settings.content_root / "posts" / "older-note.md"
+        latest = settings.content_root / "posts" / "latest-note.md"
+        os.utime(older, (1_700_000_000, 1_700_000_000))
+        os.utime(latest, (1_700_000_100, 1_700_000_100))
+        with TestClient(app) as client:
+            self._login(client)
+            r = client.get("/admin/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("写作工作台", r.text)
+        self.assertIn("继续上次编辑", r.text)
+        self.assertIn("最近编辑的笔记", r.text)
+        self.assertIn("待处理", r.text)
+        self.assertIn("站点运行状态", r.text)
+        self.assertIn('aria-current="page"', r.text)
+
+    def test_empty_note_list_explains_the_next_action(self):
+        with TestClient(app) as client:
+            self._login(client)
+            r = client.get("/admin/posts")
+            filtered = client.get("/admin/posts?q=missing")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("新建第一篇笔记", r.text)
+        self.assertEqual(filtered.status_code, 200)
+        self.assertIn("清除筛选", filtered.text)
+
+    def test_scheduled_note_list_uses_user_facing_status(self):
+        store.write_markdown(
+            "posts",
+            "scheduled-note",
+            {"title": "待发布笔记", "date": "2099-01-01", "status": "published"},
+            "正文",
+        )
+        with TestClient(app) as client:
+            self._login(client)
+            r = client.get("/admin/posts?status=scheduled")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("待发布笔记", r.text)
+        self.assertIn("定时发布", r.text)
+
+    def test_editor_prioritizes_title_body_and_save(self):
+        with TestClient(app) as client:
+            self._login(client)
+            r = client.get("/admin/posts/new")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('autofocus', r.text)
+        self.assertIn('for="body"', r.text)
+        self.assertIn("发布设置", r.text)
+        self.assertIn("保存笔记", r.text)
+
+    def test_tags_page_puts_organizing_action_before_long_list(self):
+        store.write_markdown(
+            "posts",
+            "tagged-note",
+            {"title": "带标签的笔记", "date": "2026-08-18", "tags": ["linux"]},
+            "正文",
+        )
+        with TestClient(app) as client:
+            self._login(client)
+            r = client.get("/admin/tags")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('id="tag-action"', r.text)
+        self.assertIn("删除时无需填写", r.text)
+        self.assertLess(r.text.index("选择操作"), r.text.index("当前分布"))
 
     def test_stats_path_maps_to_title(self):
         store.write_markdown(

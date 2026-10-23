@@ -2,7 +2,7 @@
 {% block title %}站点备份 · Li&Notes 后台{% endblock %}
 {% block content %}
 <nav class="admin-breadcrumb" aria-label="面包屑">
-  <a href="/{{ admin_path }}/">仪表盘</a>
+  <a href="/{{ admin_path }}/">工作台</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <span aria-current="page">站点备份</span>
 </nav>
@@ -35,7 +35,7 @@
   </label>
   <label><input type="checkbox" name="confirm" value="1" required> 我确认会用备份覆盖当前站点数据</label>
   <div class="form-actions">
-    <button type="submit" class="btn btn-secondary">恢复并重建</button>
+    <button type="submit" class="btn btn-danger">恢复并重建</button>
   </div>
 </form>
 </div>
