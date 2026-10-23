@@ -21,7 +21,13 @@
   --liblog-card-shadow:0 1px 2px #183a3308,0 12px 32px #183a330f;
   --liblog-card-shadow-hover:0 2px 4px #183a330a,0 18px 44px #183a3318;
   --liblog-inset-highlight:#ffffffd6;
-  --liblog-header-sheen:#ffffffb8;
+  --liblog-header-bg:#f6fbf900;
+  --liblog-header-bg-scrolled:#f6fbf9eb;
+  --liblog-header-border:#d8e7e200;
+  --liblog-header-border-scrolled:#d8e7e273;
+  --liblog-header-blur:18px;
+  --liblog-header-saturate:145%;
+  --liblog-header-shadow-scrolled:0 1px 0 #d8e7e28c,0 14px 34px #183a3308;
   --liblog-toc-active:#d9f4eecc;
   --liblog-accent-line:linear-gradient(90deg,#7fd4c6,#8fc7f0 48%,#b0c79e);
 }
@@ -42,7 +48,13 @@
   --liblog-card-shadow:0 1px 2px #1018201f,0 12px 32px #10182033;
   --liblog-card-shadow-hover:0 2px 4px #10182024,0 18px 44px #10182040;
   --liblog-inset-highlight:#f0f2f41f;
-  --liblog-header-sheen:#f0f2f40d;
+  --liblog-header-bg:#3a3f4500;
+  --liblog-header-bg-scrolled:#3a3f45eb;
+  --liblog-header-border:#59616900;
+  --liblog-header-border-scrolled:#59616980;
+  --liblog-header-blur:18px;
+  --liblog-header-saturate:135%;
+  --liblog-header-shadow-scrolled:0 1px 0 #5961698c,0 14px 34px #1018201a;
   --liblog-toc-active:#7fd4c626;
   --liblog-accent-line:linear-gradient(90deg,#7fd4c6,#a8d4f0 48%,#b0c79e);
 }

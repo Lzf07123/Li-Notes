@@ -3235,21 +3235,37 @@ body {
 .site-header {
   border-color: var(--liblog-header-border);
   background: var(--liblog-header-bg);
-  box-shadow: 0 1px 0 var(--liblog-header-sheen);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   transition:
     background-color var(--liblog-motion-base) var(--liblog-ease-out),
     border-color var(--liblog-motion-base) var(--liblog-ease-out),
-    box-shadow var(--liblog-motion-base) var(--liblog-ease-out);
+    box-shadow var(--liblog-motion-base) var(--liblog-ease-out),
+    -webkit-backdrop-filter var(--liblog-motion-base) var(--liblog-ease-out),
+    backdrop-filter var(--liblog-motion-base) var(--liblog-ease-out);
 }
 .site-header.is-scrolled {
-  background: var(--liblog-surface-raised);
-  box-shadow: var(--liblog-card-shadow-hover);
+  background: var(--liblog-header-bg-scrolled);
+  border-color: var(--liblog-header-border-scrolled);
+  box-shadow: var(--liblog-header-shadow-scrolled);
+  -webkit-backdrop-filter:
+    blur(var(--liblog-header-blur))
+    saturate(var(--liblog-header-saturate));
+  backdrop-filter:
+    blur(var(--liblog-header-blur))
+    saturate(var(--liblog-header-saturate));
 }
 .site-header .flow-rule {
   height: 1px;
-  opacity: 0.46;
+  opacity: 0;
   background-size: 100% 100%;
   animation: none;
+  transition: opacity var(--liblog-motion-base) var(--liblog-ease-out);
+}
+.site-header.is-scrolled .flow-rule { opacity: 0.2; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header.is-scrolled { background: var(--liblog-bg); }
 }
 .site-header-inner {
   width: 100%;
