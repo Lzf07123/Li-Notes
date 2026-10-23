@@ -265,6 +265,25 @@ class AdminRoutesTest(unittest.TestCase):
             self.assertEqual(r.status_code, 200)
             self.assertIn("custom-select", r.text)
 
+    def test_row_more_menu_is_an_out_of_flow_layer(self):
+        store.write_markdown(
+            "posts",
+            "menu-layer",
+            {"title": "浮层菜单", "date": "2026-08-18", "status": "published"},
+            "正文",
+        )
+        with TestClient(app) as client:
+            self._login(client)
+            r = client.get("/admin/posts")
+            css = client.get("/admin/static/css/admin.css")
+            js = client.get("/admin/static/js/admin-ui.js")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('class="row-actions-more" data-action-menu', r.text)
+        self.assertIn('aria-label="更多操作" aria-expanded="false"', r.text)
+        self.assertIn('class="row-actions-menu" data-row-actions-menu', r.text)
+        self.assertRegex(css.text, r"\.row-actions-menu\s*\{[^}]*position:\s*fixed;")
+        self.assertIn("positionRowActionsMenu", js.text)
+
     def test_bulk_checkboxes_attached_to_bulk_form(self):
         store.write_markdown(
             "posts",

@@ -662,9 +662,9 @@ textarea.mono, input.mono { font-family: ui-monospace, "SF Mono", Menlo, Consola
 .table-shell tbody tr {
   transition: background-color var(--liblog-motion-fast) var(--liblog-ease-out);
 }
-/* v45 性能：不引入阴影动画，减少重绘 */
+/* v45 性能：保留样式隔离；布局包含会把固定菜单重新限制在表格滚动容器内 */
 .table-shell-wrap {
-  contain: layout style;
+  contain: style;
 }
 /* v46 深色模式：悬停与斑马纹使用令牌自动适配 */
 .table-shell--striped tbody tr:nth-child(even),
@@ -2460,14 +2460,22 @@ input[type="file"]::file-selector-button:hover {
   display: none;
 }
 .row-actions-menu {
+  position: fixed;
+  z-index: 80;
   display: grid;
   gap: 2px;
-  margin-top: 4px;
+  width: max-content;
+  min-width: 190px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100svh - 24px);
+  margin: 0;
   padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--liblog-border);
   border-radius: 10px;
   background: var(--liblog-surface);
-  box-shadow: var(--liblog-shadow-sm);
+  box-shadow: var(--liblog-shadow-md);
 }
 .row-actions-menu .btn-link,
 .row-actions-menu form {

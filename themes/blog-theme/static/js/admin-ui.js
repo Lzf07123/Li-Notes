@@ -79,6 +79,66 @@
     });
   }
 
+  function positionRowActionsMenu(menu) {
+    var trigger = menu.querySelector(":scope > summary");
+    var panel = menu.querySelector("[data-row-actions-menu]");
+    if (!trigger || !panel) return;
+
+    var margin = 12;
+    var gap = 6;
+    var viewportWidth = document.documentElement.clientWidth;
+    var viewportHeight = window.innerHeight;
+    var triggerRect = trigger.getBoundingClientRect();
+
+    if (triggerRect.bottom < 0 || triggerRect.top > viewportHeight) {
+      menu.open = false;
+      return;
+    }
+
+    panel.style.maxHeight = Math.max(44, viewportHeight - margin * 2) + "px";
+    var panelRect = panel.getBoundingClientRect();
+    var width = Math.min(panelRect.width, viewportWidth - margin * 2);
+    var left = Math.min(
+      Math.max(margin, triggerRect.right - width),
+      viewportWidth - width - margin
+    );
+    var below = triggerRect.bottom + gap;
+    var above = triggerRect.top - panelRect.height - gap;
+    var top = below;
+
+    if (below + panelRect.height > viewportHeight - margin) {
+      top = above >= margin
+        ? above
+        : Math.max(margin, viewportHeight - margin - panelRect.height);
+    }
+
+    panel.style.left = Math.round(left) + "px";
+    panel.style.top = Math.round(top) + "px";
+  }
+
+  var rowMenuFrame = 0;
+
+  function scheduleRowMenuPosition() {
+    if (rowMenuFrame) return;
+    rowMenuFrame = window.requestAnimationFrame(function () {
+      rowMenuFrame = 0;
+      document.querySelectorAll("details.row-actions-more[open]").forEach(positionRowActionsMenu);
+    });
+  }
+
+  document.querySelectorAll("details.row-actions-more[data-action-menu]").forEach(function (menu) {
+    var trigger = menu.querySelector(":scope > summary");
+    menu.addEventListener("toggle", function () {
+      if (trigger) {
+        trigger.setAttribute("aria-expanded", menu.open ? "true" : "false");
+      }
+      if (menu.open) scheduleRowMenuPosition();
+    });
+  });
+
+  window.addEventListener("resize", scheduleRowMenuPosition, { passive: true });
+  window.addEventListener("scroll", scheduleRowMenuPosition, true);
+
   document.querySelectorAll("details[data-action-menu]").forEach(function (menu) {
     menu.addEventListener("toggle", function () {
       if (menu.open) closeActionMenus(menu);
@@ -95,7 +155,12 @@
       event.preventDefault();
       navDialog.close();
     }
+    var openMenu = document.querySelector("details[data-action-menu][open]");
     closeActionMenus(null);
+    if (openMenu) {
+      var trigger = openMenu.querySelector(":scope > summary");
+      if (trigger) trigger.focus();
+    }
   });
 
   var bulkForm = document.getElementById("bulk-form");
