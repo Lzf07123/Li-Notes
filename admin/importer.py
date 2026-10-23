@@ -2,19 +2,211 @@
 
 import io
 import hashlib
+import json
 import re
 import unicodedata
 import zipfile
-from datetime import date
+from datetime import date, datetime
 from pathlib import PurePosixPath
 
 import yaml
 
-from admin import content
+from admin import content, knowledge as knowledge_store
 from admin.config import settings
 
 MD_SUFFIXES = (".md", ".markdown")
 SKIP_STEMS = {"_index", "index"}
+VALID_STATUSES = {"published", "draft"}
+MAX_TITLE_LENGTH = 200
+MAX_SUMMARY_LENGTH = 1000
+MAX_TAGS = 50
+MAX_TAG_LENGTH = 64
+TEMPLATE_KINDS = {
+    "note": "linotes-note-template.md",
+    "mini": "linotes-mini-sync-template.md",
+}
+
+
+def _plain_text(
+    value,
+    field: str,
+    filename: str,
+    *,
+    required: bool = False,
+    max_length: int = 4000,
+) -> str:
+    if value is None:
+        value = ""
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        raise ValueError(f"{filename}: {field} 必须是文本")
+    text = str(value).strip()
+    if required and not text:
+        raise ValueError(f"{filename}: {field} 不能为空")
+    if len(text) > max_length:
+        raise ValueError(f"{filename}: {field} 超过 {max_length} 字符")
+    return text
+
+
+def _normalize_date(value, filename: str) -> str:
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    text = _plain_text(value, "date", filename, required=True, max_length=40)
+    try:
+        return date.fromisoformat(text[:10]).isoformat()
+    except ValueError as exc:
+        raise ValueError(f"{filename}: date 必须是 YYYY-MM-DD 格式") from exc
+
+
+def _normalize_status(value, filename: str) -> str:
+    status = _plain_text(
+        value if value is not None else "published",
+        "status",
+        filename,
+        required=True,
+        max_length=20,
+    ).lower()
+    if status not in VALID_STATUSES:
+        raise ValueError(f"{filename}: status 仅支持 published 或 draft")
+    return status
+
+
+def _normalize_tags(value, filename: str) -> list[str]:
+    if value in (None, ""):
+        return []
+    if isinstance(value, str):
+        raw_items = value.split(",")
+    elif isinstance(value, list):
+        raw_items = value
+    else:
+        raise ValueError(f"{filename}: tags 必须是列表或用逗号分隔的文本")
+    if len(raw_items) > MAX_TAGS:
+        raise ValueError(f"{filename}: tags 最多 {MAX_TAGS} 项")
+    tags: list[str] = []
+    seen: set[str] = set()
+    for item in raw_items:
+        tag = _plain_text(item, "tags", filename, max_length=MAX_TAG_LENGTH)
+        key = tag.casefold()
+        if tag and key not in seen:
+            seen.add(key)
+            tags.append(tag)
+    return tags
+
+
+def _normalize_bool(value, field: str, filename: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    text = _plain_text(value, field, filename, required=True, max_length=10).lower()
+    if text in {"true", "1", "yes", "on"}:
+        return True
+    if text in {"false", "0", "no", "off"}:
+        return False
+    raise ValueError(f"{filename}: {field} 必须是 true 或 false")
+
+
+def _normalize_mini(fm: dict, slug: str, filename: str) -> None:
+    raw = fm.get("mini_json")
+    if raw in (None, ""):
+        return
+    try:
+        mini = knowledge_store.parse_mini_field(raw)
+        normalized = knowledge_store.validate_mini_config(
+            mini, slug, fm.get("tags") or []
+        )
+    except ValueError as exc:
+        raise ValueError(f"{filename}: mini_json 校验失败：{exc}") from exc
+    fm["mini_json"] = json.dumps(normalized, ensure_ascii=False, indent=2)
+
+
+def template_markdown(kind: str, today: date | None = None) -> str:
+    """生成可直接编辑并导入的 Markdown 模板。"""
+    if kind not in TEMPLATE_KINDS:
+        raise ValueError("未知模板类型")
+    day = (today or date.today()).isoformat()
+    if kind == "note":
+        return f"""---
+title: "示例：我的学习笔记"
+slug: imported-note-example
+date: {day}
+status: draft
+tags:
+  - linux
+  - command
+summary: "一句话说明这篇笔记解决了什么问题。"
+cover: ""
+pinned: false
+---
+
+# 示例：我的学习笔记
+
+## 今天学了什么
+
+用一两句话说明主题、使用场景和前置条件。
+
+## 操作步骤
+
+1. 写下关键步骤。
+2. 给出可复现的命令或配置。
+3. 记录验证结果和容易出错的地方。
+
+## 小结
+
+写下这次练习真正掌握了什么。
+"""
+    mini = {
+        "enabled": True,
+        "items": [
+            {
+                "id": "mini-sync-example",
+                "category": "linux",
+                "title": "示例：更新软件源索引",
+                "command": "apt update",
+                "summary": "刷新 Debian / Ubuntu 的软件包索引。",
+                "keywords": ["更新", "软件源", "apt"],
+                "tags": ["Linux", "包管理"],
+                "syntax": "sudo apt update",
+                "examples": [
+                    {
+                        "label": "刷新软件源索引",
+                        "code": "sudo apt update",
+                    }
+                ],
+                "notes": ["安装或升级软件包前先执行。"],
+                "related": [],
+                "order": 10,
+            }
+        ],
+    }
+    mini_json = json.dumps(mini, ensure_ascii=False, indent=2)
+    indented_mini = "\n".join(f"  {line}" for line in mini_json.splitlines())
+    return f"""---
+title: "示例：小程序同步速查"
+slug: mini-sync-example
+date: {day}
+status: draft
+tags:
+  - linux
+  - command
+summary: "演示如何把一篇笔记同步为小程序速查条目。"
+cover: ""
+pinned: false
+mini_json: |-
+{indented_mini}
+---
+
+# 示例：小程序同步速查
+
+## 命令速查
+
+| 命令 | 作用 |
+| --- | --- |
+| `sudo apt update` | 刷新软件源索引 |
+
+## 说明
+
+发布文章后，后台构建会读取 `mini_json` 并生成小程序 manifest。
+"""
 
 
 def parse_document(filename: str, text: str) -> tuple[str, dict, str]:
@@ -23,6 +215,11 @@ def parse_document(filename: str, text: str) -> tuple[str, dict, str]:
     if fm_text:
         try:
             fm = yaml.safe_load(fm_text) or {}
+        except ValueError as exc:
+            detail = str(exc).lower()
+            if "month must be" in detail or "day is out of range" in detail:
+                raise ValueError(f"{filename}: date 必须是 YYYY-MM-DD 格式") from exc
+            raise ValueError(f"{filename}: frontmatter 解析失败：{exc}") from exc
         except yaml.YAMLError as exc:
             raise ValueError(f"{filename}: frontmatter 解析失败") from exc
         body = body.lstrip("\n")
@@ -34,17 +231,44 @@ def parse_document(filename: str, text: str) -> tuple[str, dict, str]:
     if security_errors:
         raise ValueError(f"{filename}: 正文包含不安全 HTML：{security_errors[0]}")
     explicit = str(fm.pop("slug", "")).strip("/")
+    if fm.get("date") not in (None, ""):
+        fm["date"] = _normalize_date(fm["date"], filename)
+    fm["status"] = _normalize_status(fm.get("status"), filename)
+    fm["tags"] = _normalize_tags(fm.get("tags"), filename)
+    if "title" in fm:
+        fm["title"] = _plain_text(
+            fm["title"],
+            "title",
+            filename,
+            max_length=MAX_TITLE_LENGTH,
+        )
+        if not fm["title"]:
+            fm.pop("title")
     stem = PurePosixPath(filename).stem
     slug = _resolve_slug(explicit, stem, fm.get("title", ""), filename)
     if not fm.get("title"):
         fm["title"] = _infer_title(stem, body)
+    fm["title"] = _plain_text(
+        fm["title"],
+        "title",
+        filename,
+        required=True,
+        max_length=MAX_TITLE_LENGTH,
+    )
     if not fm.get("date"):
         fm["date"] = _infer_date(stem)
-    fm.setdefault("status", "published")
-    if isinstance(fm.get("tags"), str):
-        fm["tags"] = [t.strip() for t in fm["tags"].split(",") if t.strip()]
-    elif not isinstance(fm.get("tags"), list):
-        fm["tags"] = []
+    if "summary" in fm:
+        fm["summary"] = _plain_text(
+            fm["summary"],
+            "summary",
+            filename,
+            max_length=MAX_SUMMARY_LENGTH,
+        )
+    if "cover" in fm:
+        fm["cover"] = _plain_text(fm["cover"], "cover", filename, max_length=2048)
+    if "pinned" in fm:
+        fm["pinned"] = _normalize_bool(fm["pinned"], "pinned", filename)
+    _normalize_mini(fm, slug, filename)
     return slug, fm, body
 
 
@@ -140,7 +364,18 @@ def import_posts(
     每个文件独立校验：不符合导入要求的条目逐项跳过并记入 errors，
     不中断其余文件的导入；超过单次数量上限时仅处理前 N 个并记录提示。
     """
-    result = {"imported": 0, "skipped": 0, "errors": [], "files": []}
+    result = {
+        "imported": 0,
+        "skipped": 0,
+        "errors": [],
+        "files": [],
+        "skipped_files": [],
+    }
+
+    def skip(filename: str, reason: str) -> None:
+        result["skipped"] += 1
+        result["skipped_files"].append({"filename": filename, "reason": reason})
+
     if len(entries) > settings.import_max_files:
         result["errors"].append(
             f"超过单次导入数量上限（{settings.import_max_files}），其余文件已跳过"
@@ -155,26 +390,31 @@ def import_posts(
             result["errors"].append(f"{filename}: 不支持的文件类型")
             continue
         if PurePosixPath(filename).stem in SKIP_STEMS or filename.startswith("."):
-            result["skipped"] += 1
+            skip(filename, "系统索引或隐藏文件")
             continue
         if len(data) > settings.import_max_file_bytes:
             result["errors"].append(f"{filename}: 超过单文件大小限制")
             continue
         try:
-            text = data.decode("utf-8-sig", errors="replace")
+            text = data.decode("utf-8-sig")
+            if "\x00" in text:
+                raise ValueError("文件包含 NUL 控制字符")
             if not text.strip():
                 result["errors"].append(f"{filename}: 文件内容为空，已跳过")
                 continue
             slug, fm, body = parse_document(filename, text)
+        except UnicodeDecodeError:
+            result["errors"].append(f"{filename}: 不是有效的 UTF-8 文本")
+            continue
         except ValueError as exc:
             result["errors"].append(str(exc))
             continue
         if slug in seen:
-            result["skipped"] += 1
+            skip(filename, f"本批次已存在相同标识：{slug}")
             continue
         seen.add(slug)
         if content.markdown_exists("posts", slug) and not overwrite:
-            result["skipped"] += 1
+            skip(filename, f"目标标识已存在且未勾选覆盖同名：{slug}")
             continue
         try:
             content.write_markdown("posts", slug, fm, body)

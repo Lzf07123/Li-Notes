@@ -1,15 +1,6 @@
 {% extends "base.html" %}
-{% block title %}批量导入 · Li&Notes 后台{% endblock %}
+{% block title %}批量导入笔记 · Li&Notes 后台{% endblock %}
 {% block content %}
-<style>
-  .import-pending-list {
-    max-height: 320px;
-    overflow-y: auto;
-  }
-  .import-pending-list .upload-file {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-  }
-</style>
 <nav class="admin-breadcrumb" aria-label="面包屑">
   <a href="/{{ admin_path }}/">工作台</a>
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
@@ -17,94 +8,216 @@
   <span class="admin-breadcrumb-sep" aria-hidden="true">/</span>
   <span aria-current="page">批量导入</span>
 </nav>
-<div class="list-head">
-  <h1>批量导入笔记</h1>
-  <a class="btn btn-ghost" href="/{{ admin_path }}/posts">返回笔记</a>
-</div>
+<header class="admin-page-head">
+  <div class="admin-page-heading">
+    <p class="admin-kicker">内容迁移</p>
+    <h1>批量导入笔记</h1>
+    <p class="admin-page-subtitle">从模板开始最稳妥：先下载、填写，再上传 Markdown、文件夹或 ZIP。每个文件会独立校验，错误不会中断其他文件。</p>
+  </div>
+  <div class="admin-page-actions import-page-actions">
+    <a class="btn btn-secondary" href="/{{ admin_path }}/posts/import/template/note" download>下载笔记模板</a>
+    <a class="btn btn-secondary" href="/{{ admin_path }}/posts/import/template/mini" download>下载小程序同步模板</a>
+  </div>
+</header>
 {% if flash %}<p class="flash" role="status">{{ flash }}</p>{% endif %}
 {% if result %}
-<div class="admin-card">
-  <h2>导入结果</h2>
-  <p>导入 {{ result.imported }} 篇，跳过 {{ result.skipped }} 篇，失败 {{ result.errors|length }} 个文件{% if build_pending %}（正在后台构建…）{% endif %}。</p>
+<section class="admin-card import-result" aria-labelledby="import-result-title">
+  <div class="admin-card-head">
+    <div>
+      <p class="admin-kicker">本次导入</p>
+      <h2 id="import-result-title">导入结果</h2>
+    </div>
+    <span class="admin-badge {{ 'admin-badge--published' if result.errors|length == 0 else 'admin-badge--danger' }}">
+      {{ "全部通过" if result.errors|length == 0 else "需要处理" }}
+    </span>
+  </div>
+  <div class="import-result-counts" aria-label="导入统计">
+    <div><span>成功导入</span><strong>{{ result.imported }}</strong></div>
+    <div><span>跳过</span><strong>{{ result.skipped }}</strong></div>
+    <div><span>失败</span><strong>{{ result.errors|length }}</strong></div>
+  </div>
+  <p class="field-help">导入 {{ result.imported }} 篇，跳过 {{ result.skipped }} 篇，失败 {{ result.errors|length }} 项。</p>
+  {% if result.errors %}
+  <div id="import-result-summary" class="import-error-summary" tabindex="-1" role="alert">
+    <strong>部分文件未导入</strong>
+    <p>请展开下方失败明细，修正文件后重新上传。已成功的文件不会重复写入，勾选“覆盖同名”前请先确认目标标识。</p>
+  </div>
+  {% endif %}
+  {% if build_pending %}<p class="flash" role="status">已开始后台构建，完成前请继续查看导入结果。</p>{% endif %}
   {% if result.files %}
   <details open>
-  <summary>成功导入 {{ result.files|length }} 个文件</summary>
-  <div class="table-shell-wrap">
-    <table class="table-shell table-shell--cards">
-      <thead>
-        <tr>
-          <th scope="col">文件</th>
-          <th scope="col">标识</th>
-          <th scope="col">标题</th>
-          <th scope="col">日期</th>
-          <th scope="col">标签</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for f in result.files %}
-        <tr>
-          <td data-label="文件">{{ f.filename }}</td>
-          <td data-label="标识"><code>{{ f.slug }}</code></td>
-          <td data-label="标题">{{ f.title }}</td>
-          <td data-label="日期">{{ f.date }}</td>
-          <td data-label="标签">{{ f.tags|join("、") or "—" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <summary>成功导入 {{ result.files|length }} 个文件</summary>
+    <div class="table-shell-wrap">
+      <table class="table-shell table-shell--cards">
+        <thead>
+          <tr>
+            <th scope="col">文件</th>
+            <th scope="col">标识</th>
+            <th scope="col">标题</th>
+            <th scope="col">日期</th>
+            <th scope="col">标签</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in result.files %}
+          <tr>
+            <td data-label="文件">{{ f.filename }}</td>
+            <td data-label="标识"><code>{{ f.slug }}</code></td>
+            <td data-label="标题"><a href="/{{ admin_path }}/posts/{{ f.slug }}/edit">{{ f.title }}</a></td>
+            <td data-label="日期">{{ f.date }}</td>
+            <td data-label="标签">{{ f.tags|join("、") or "—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+  {% endif %}
+  {% if result.skipped_files %}
+  <details class="import-result-detail">
+    <summary>跳过明细（{{ result.skipped_files|length }} 个）</summary>
+    <ul class="import-skip-list">
+      {% for item in result.skipped_files %}
+      <li>
+        <strong>{{ item.filename }}</strong>
+        <span>{{ item.reason }}</span>
+      </li>
+      {% endfor %}
+    </ul>
   </details>
   {% endif %}
   {% if result.errors %}
-  <details>
-  <summary>失败明细（{{ result.errors|length }} 个）</summary>
-  <ul class="import-errors">
-    {% for err in result.errors[:20] %}
-    <li>{{ err }}</li>
-    {% endfor %}
-    {% if result.errors|length > 20 %}<li>… 还有 {{ result.errors|length - 20 }} 条错误未显示</li>{% endif %}
-  </ul>
+  <details class="import-result-detail" open>
+    <summary>失败明细（{{ result.errors|length }} 个）</summary>
+    <ul class="import-errors">
+      {% for err in result.errors[:20] %}
+      <li>{{ err }}</li>
+      {% endfor %}
+      {% if result.errors|length > 20 %}<li>… 还有 {{ result.errors|length - 20 }} 条错误未显示</li>{% endif %}
+    </ul>
   </details>
   {% endif %}
-  {% if result.imported %}
   <div class="form-actions">
-    <a class="btn" href="/{{ admin_path }}/posts">返回笔记列表</a>
+    {% if result.imported %}<a class="btn btn-primary" href="/{{ admin_path }}/posts">查看笔记列表</a>{% endif %}
+    <a class="btn btn-secondary" href="/{{ admin_path }}/posts/import">重新导入</a>
   </div>
-  {% endif %}
-</div>
+</section>
 {% endif %}
-<div class="admin-card">
-<p class="field-help">支持一次选择多个 .md/.markdown 文件、直接选择整个文件夹（自动遍历所有子文件夹），或上传包含 Markdown 的 .zip。不符合导入要求的文件（类型不支持、内容为空、解析失败、非法路径、超过大小限制等）会自动跳过，并在导入结果中列出原因，不影响其他文件导入；已存在的 slug 默认跳过，勾选“覆盖同名”会覆盖；导入完成后统一重建一次。</p>
-<form method="post" action="/{{ admin_path }}/posts/import" enctype="multipart/form-data" data-busy>
-  <input type="hidden" name="_csrf" value="{{ csrf }}">
-  <fieldset class="import-source">
-    <legend>导入来源（二选一）</legend>
-    <label><input type="radio" name="source_mode" value="files" checked> Markdown / ZIP 文件</label>
-    <label><input type="radio" name="source_mode" value="folder"> 选择文件夹（自动遍历子文件夹）</label>
-    <div id="source-files" class="import-source-pane">
-      <label>Markdown / ZIP 文件
-        <input type="file" name="files" multiple accept=".md,.markdown,.zip" required>
-      </label>
+<section class="admin-card import-guide" aria-labelledby="import-guide-title">
+  <div class="admin-card-head">
+    <div>
+      <p class="admin-kicker">推荐流程</p>
+      <h2 id="import-guide-title">三步完成导入</h2>
     </div>
-    <div id="source-folder" class="import-source-pane" hidden>
-      <label>选择文件夹
-        <input type="file" name="files" webkitdirectory>
-      </label>
-    </div>
-  </fieldset>
-  <label><input type="checkbox" name="overwrite" value="1"> 覆盖同名笔记</label>
-  <div class="form-actions">
-    <button type="submit" class="btn btn-primary">导入并重建</button>
   </div>
-</form>
-<div id="import-pending" class="upload-progress-panel" hidden>
+  <ol class="import-steps">
+    <li>
+      <span class="import-step-number" aria-hidden="true">1</span>
+      <div>
+        <h3>下载模板</h3>
+        <p>普通笔记与小程序同步使用不同模板，先在本地编辑器完成填写。</p>
+        <div class="import-template-actions">
+          <a class="btn btn-secondary btn-sm" href="/{{ admin_path }}/posts/import/template/note" download>笔记模板</a>
+          <a class="btn btn-secondary btn-sm" href="/{{ admin_path }}/posts/import/template/mini" download>小程序同步模板</a>
+        </div>
+      </div>
+    </li>
+    <li>
+      <span class="import-step-number" aria-hidden="true">2</span>
+      <div>
+        <h3>填写并检查</h3>
+        <p>标题和日期必填；状态只能使用 <code>published</code> 或 <code>draft</code>。小程序配置会在导入前校验。</p>
+      </div>
+    </li>
+    <li>
+      <span class="import-step-number" aria-hidden="true">3</span>
+      <div>
+        <h3>上传并查看结果</h3>
+        <p>每个文件独立处理；成功、跳过和失败都会给出具体文件与原因。</p>
+      </div>
+    </li>
+  </ol>
+  <details class="editor-advanced import-field-guide">
+    <summary>模板字段说明</summary>
+    <dl class="import-field-list">
+      <div><dt><code>title</code></dt><dd>必填，建议不超过 60 字。</dd></div>
+      <div><dt><code>date</code></dt><dd><code>YYYY-MM-DD</code>，用于排序和归档。</dd></div>
+      <div><dt><code>status</code></dt><dd><code>published</code> 发布；<code>draft</code> 草稿。</dd></div>
+      <div><dt><code>tags</code></dt><dd>YAML 列表或逗号分隔文本；导入时会去重。</dd></div>
+      <div><dt><code>slug</code></dt><dd>选填，只能使用小写字母、数字和中划线；不填则从文件名或标题生成。</dd></div>
+      <div><dt><code>mini_json</code></dt><dd>小程序同步专用 JSON 文本；仅在小程序模板中提供完整示例。</dd></div>
+    </dl>
+  </details>
+</section>
+
+<section class="admin-card import-form-card" aria-labelledby="import-form-title">
+  <div class="admin-card-head">
+    <div>
+      <p class="admin-kicker">选择来源</p>
+      <h2 id="import-form-title">上传要导入的内容</h2>
+    </div>
+    <span class="admin-badge">最多 {{ import_max_files }} 个文件</span>
+  </div>
+  <p class="field-help">支持 Markdown、整个文件夹或 ZIP；单文件上限 {{ import_max_file_mb }} MB，单次上传总量上限 {{ import_max_zip_mb }} MB。仅使用 UTF-8 文本。</p>
+  <form id="import-form" method="post" action="/{{ admin_path }}/posts/import" enctype="multipart/form-data" data-busy>
+    <input type="hidden" name="_csrf" value="{{ csrf }}">
+    <fieldset class="import-source">
+      <legend class="visually-hidden">导入来源</legend>
+      <div class="import-mode-switch">
+        <label><input type="radio" name="source_mode" value="files" checked><span>Markdown / ZIP 文件</span></label>
+        <label><input type="radio" name="source_mode" value="folder"><span>整个文件夹</span></label>
+      </div>
+      <div id="source-files" class="import-source-pane">
+        <label class="import-dropzone" for="import-files">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path>
+            <path d="M5 20h14"></path>
+          </svg>
+          <strong>拖入文件，或点击选择</strong>
+          <span>可一次选择多个 .md、.markdown 或 .zip</span>
+          <input id="import-files" class="visually-hidden" type="file" name="files"
+                 multiple accept=".md,.markdown,.zip" required>
+        </label>
+      </div>
+      <div id="source-folder" class="import-source-pane" hidden>
+        <label class="import-dropzone" for="import-folder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h7l2 3h9v11H3z"></path>
+          </svg>
+          <strong>选择笔记文件夹</strong>
+          <span>支持子文件夹，系统只读取 Markdown 文件</span>
+          <input id="import-folder" class="visually-hidden" type="file" name="files" webkitdirectory>
+        </label>
+      </div>
+    </fieldset>
+    <label class="admin-checkbox-field import-overwrite">
+      <input id="overwrite" type="checkbox" name="overwrite" value="1">
+      <span>
+        <strong>覆盖同名笔记</strong>
+        <small>仅在已存在相同标识时覆盖；该操作不会创建导入前快照，不确定时请先下载站点备份。</small>
+      </span>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">校验并导入</button>
+      <a class="btn btn-ghost" href="/{{ admin_path }}/backup">先备份站点</a>
+    </div>
+  </form>
+<div id="import-pending" class="upload-progress-panel" hidden aria-live="polite">
   <div class="upload-progress-overview">
-    <span class="upload-status">待导入文件</span>
+    <span id="import-pending-summary" class="upload-status">待导入文件</span>
   </div>
   <ul id="import-pending-list" class="upload-file-list import-pending-list"></ul>
 </div>
+</section>
 <script>
   (function () {
+    var summary = document.getElementById("import-result-summary");
+    if (summary) window.requestAnimationFrame(function () { summary.focus(); });
+  })();
+  (function () {
+    var form = document.getElementById("import-form");
     var radios = document.querySelectorAll('input[name="source_mode"]');
     var panes = {
       files: document.getElementById("source-files"),
@@ -112,6 +225,7 @@
     };
     var pendingPanel = document.getElementById("import-pending");
     var pendingList = document.getElementById("import-pending-list");
+    var pendingSummary = document.getElementById("import-pending-summary");
     var inputs = [
       panes.files.querySelector('input[type="file"]'),
       panes.folder.querySelector('input[type="file"]')
@@ -127,9 +241,11 @@
       pendingList.innerHTML = "";
       if (!input.files.length) {
         pendingPanel.hidden = true;
+        pendingSummary.textContent = "待导入文件";
         return;
       }
       pendingPanel.hidden = false;
+      pendingSummary.textContent = "待导入 " + input.files.length + " 个文件";
       Array.prototype.slice.call(input.files).forEach(function (file) {
         var li = document.createElement("li");
         li.className = "upload-file";
@@ -155,11 +271,11 @@
           var reader = new FileReader();
           reader.onload = function () {
             var text = String(reader.result || "");
-            var parts = text.split("---");
             var title = "";
             var date = "";
-            if (parts.length >= 3) {
-              var fm = parts[1];
+            var frontmatter = text.match(/^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
+            if (frontmatter) {
+              var fm = frontmatter[1];
               var tm = fm.match(/^title:\s*(.+)$/m);
               var dm = fm.match(/^date:\s*(.+)$/m);
               if (tm) title = tm[1].trim().replace(/^["']|["']$/g, "");
@@ -170,6 +286,11 @@
               if (hm) title = hm[1].trim();
             }
             meta.textContent = (title || file.name) + (date ? " · " + date : "");
+          };
+          reader.onerror = function () {
+            meta.textContent = "无法读取文件";
+            status.textContent = "读取失败";
+            status.classList.add("is-error");
           };
           reader.readAsText(file, "utf-8");
         } else {
@@ -199,8 +320,35 @@
         renderPending(input);
       });
     });
+    if (form) {
+      ["dragover", "dragenter"].forEach(function (name) {
+        form.addEventListener(name, function (event) {
+          var checked = document.querySelector('input[name="source_mode"]:checked');
+          if (!checked || checked.value !== "files") return;
+          event.preventDefault();
+          panes.files.querySelector(".import-dropzone").classList.add("is-dragover");
+        });
+      });
+      ["dragleave", "drop"].forEach(function (name) {
+        form.addEventListener(name, function (event) {
+          event.preventDefault();
+          panes.files.querySelector(".import-dropzone").classList.remove("is-dragover");
+        });
+      });
+      form.addEventListener("drop", function (event) {
+        var checked = document.querySelector('input[name="source_mode"]:checked');
+        var files = event.dataTransfer && event.dataTransfer.files;
+        if (!checked || checked.value !== "files" || !files || !files.length) return;
+        try {
+          inputs[0].files = files;
+          renderPending(inputs[0]);
+        } catch (error) {
+          pendingPanel.hidden = false;
+          pendingSummary.textContent = "当前浏览器不支持拖入文件，请点击选择文件";
+        }
+      });
+    }
     sync();
   })();
 </script>
-</div>
 {% endblock %}

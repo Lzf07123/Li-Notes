@@ -1,7 +1,9 @@
 import io
+import json
 import tempfile
 import unittest
 import zipfile
+from datetime import date
 from pathlib import Path
 
 from admin import importer
@@ -26,6 +28,27 @@ class TestImporter(unittest.TestCase):
         self.assertEqual(fm["tags"], ["a", "b"])
         self.assertEqual(fm["status"], "published")
         self.assertEqual(body, "正文")
+
+    def test_note_template_is_valid_and_importable(self):
+        text = importer.template_markdown("note", today=date(2026, 10, 23))
+        slug, fm, body = importer.parse_document(
+            importer.TEMPLATE_KINDS["note"], text
+        )
+        self.assertEqual(slug, "imported-note-example")
+        self.assertEqual(fm["date"], "2026-10-23")
+        self.assertEqual(fm["status"], "draft")
+        self.assertIn("# 示例：我的学习笔记", body)
+
+    def test_mini_template_contains_valid_sync_config(self):
+        text = importer.template_markdown("mini", today=date(2026, 10, 23))
+        slug, fm, _ = importer.parse_document(
+            importer.TEMPLATE_KINDS["mini"], text
+        )
+        mini = json.loads(fm["mini_json"])
+        self.assertEqual(slug, "mini-sync-example")
+        self.assertTrue(mini["enabled"])
+        self.assertEqual(mini["items"][0]["id"], "mini-sync-example")
+        self.assertEqual(mini["items"][0]["category"], "linux")
 
     def test_parse_document_normalizes_slug(self):
         slug, fm, body = importer.parse_document(
@@ -80,6 +103,45 @@ class TestImporter(unittest.TestCase):
         self.assertEqual(len(result["errors"]), 1)
         self.assertIn("文件内容为空", result["errors"][0])
         self.assertFalse((settings.content_root / "posts" / "untitled.md").exists())
+
+    def test_import_rejects_invalid_utf8_without_writing(self):
+        result = importer.import_posts([("bad.md", b"---\ntitle: Bad\n---\n\xff")])
+        self.assertEqual(result["imported"], 0)
+        self.assertIn("不是有效的 UTF-8", result["errors"][0])
+        self.assertFalse((settings.content_root / "posts" / "bad.md").exists())
+
+    def test_parse_document_rejects_invalid_date_and_status(self):
+        with self.assertRaisesRegex(ValueError, "YYYY-MM-DD"):
+            importer.parse_document("a.md", "---\ntitle: A\ndate: 2026-99-99\n---\n")
+        with self.assertRaisesRegex(ValueError, "published 或 draft"):
+            importer.parse_document("a.md", "---\ntitle: A\nstatus: secret\n---\n")
+
+    def test_parse_document_normalizes_tags_pinned_and_mini(self):
+        slug, fm, _ = importer.parse_document(
+            "sync.md",
+            "---\n"
+            "title: Sync\n"
+            "status: DRAFT\n"
+            "tags: [Linux, linux, command, '']\n"
+            "pinned: 'false'\n"
+            'mini_json: \'{"enabled": false}\'\n'
+            "---\n",
+        )
+        self.assertEqual(slug, "sync")
+        self.assertEqual(fm["status"], "draft")
+        self.assertEqual(fm["tags"], ["Linux", "command"])
+        self.assertIs(fm["pinned"], False)
+        self.assertEqual(json.loads(fm["mini_json"]), {"enabled": False})
+
+    def test_parse_document_rejects_invalid_mini_config(self):
+        with self.assertRaisesRegex(ValueError, "mini_json 校验失败"):
+            importer.parse_document(
+                "sync.md",
+                "---\n"
+                "title: Sync\n"
+                'mini_json: \'{"enabled": true, "items": []}\'\n'
+                "---\n",
+            )
 
     def test_limits_read_from_settings(self):
         original_files = settings.import_max_files
@@ -145,6 +207,7 @@ class TestImporter(unittest.TestCase):
         result = importer.import_posts([("a.md", b"---\ntitle: New\n---\nnew")])
         self.assertEqual(result["imported"], 0)
         self.assertEqual(result["skipped"], 1)
+        self.assertIn("未勾选覆盖同名", result["skipped_files"][0]["reason"])
         self.assertIn(
             "Old", (settings.content_root / "posts" / "a.md").read_text(encoding="utf-8")
         )
@@ -160,6 +223,17 @@ class TestImporter(unittest.TestCase):
         self.assertIn(
             "New", (settings.content_root / "posts" / "a.md").read_text(encoding="utf-8")
         )
+
+    def test_import_reports_duplicate_slug_reason(self):
+        result = importer.import_posts(
+            [
+                ("first.md", b"---\ntitle: First\nslug: same-slug\n---\n"),
+                ("second.md", b"---\ntitle: Second\nslug: same-slug\n---\n"),
+            ]
+        )
+        self.assertEqual(result["imported"], 1)
+        self.assertEqual(result["skipped"], 1)
+        self.assertIn("本批次已存在相同标识", result["skipped_files"][0]["reason"])
 
     def test_import_posts_collects_errors(self):
         result = importer.import_posts(

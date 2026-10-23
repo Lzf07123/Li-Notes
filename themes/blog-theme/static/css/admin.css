@@ -2919,3 +2919,297 @@ input[type="file"]::file-selector-button:hover {
     transition: none;
   }
 }
+
+/* ---------- 批量导入与模板 ---------- */
+.import-guide,
+.import-form-card,
+.import-result {
+  margin-top: 16px;
+}
+.import-result-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 16px;
+  border: 1px solid var(--liblog-border);
+  border-radius: 12px;
+  background: var(--liblog-border);
+  overflow: hidden;
+}
+.import-result-counts > div {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  background: var(--liblog-surface-2);
+}
+.import-result-counts span {
+  color: var(--liblog-muted);
+  font-size: 0.75rem;
+}
+.import-result-counts strong {
+  color: var(--liblog-primary);
+  font-family: var(--liblog-font-label);
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+.import-error-summary {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--liblog-destructive);
+  border-radius: 10px;
+  background: var(--liblog-destructive-soft);
+  color: var(--liblog-destructive);
+}
+.import-error-summary:focus-visible {
+  outline: 3px solid var(--liblog-ring);
+  outline-offset: 2px;
+}
+.import-error-summary strong {
+  display: block;
+}
+.import-error-summary p {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.import-result-detail {
+  margin-top: 12px;
+}
+.import-result-detail > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  color: var(--liblog-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+.import-skip-list {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.import-skip-list li {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--liblog-border);
+  border-radius: 10px;
+  background: var(--liblog-surface-2);
+}
+.import-skip-list strong {
+  overflow-wrap: anywhere;
+}
+.import-skip-list span {
+  color: var(--liblog-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+.import-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.import-steps > li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--liblog-border);
+  border-radius: 12px;
+  background: var(--liblog-surface-2);
+}
+.import-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--liblog-primary-soft);
+  color: var(--liblog-primary);
+  font-family: var(--liblog-font-label);
+  font-weight: 700;
+}
+.import-steps h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+.import-steps p {
+  margin: 0;
+  color: var(--liblog-muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.import-template-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.import-field-guide {
+  margin-top: 14px;
+  background: var(--liblog-surface);
+}
+.import-field-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.import-field-list > div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--liblog-border);
+  border-radius: 9px;
+}
+.import-field-list dt {
+  font-weight: 700;
+}
+.import-field-list dd {
+  margin: 4px 0 0;
+  color: var(--liblog-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+.import-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.import-mode-switch label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--liblog-border);
+  border-radius: 9px;
+  background: var(--liblog-surface);
+  cursor: pointer;
+}
+.import-mode-switch label:has(input:checked) {
+  border-color: var(--liblog-primary);
+  background: var(--liblog-primary-soft);
+  color: var(--liblog-primary);
+}
+.import-mode-switch input {
+  margin: 0;
+}
+.import-dropzone {
+  display: grid;
+  place-items: center;
+  gap: 7px;
+  min-height: 180px;
+  margin: 0;
+  padding: 22px 16px;
+  border: 1px dashed var(--liblog-border);
+  border-radius: 12px;
+  background: var(--liblog-surface);
+  color: var(--liblog-muted);
+  text-align: center;
+  cursor: pointer;
+}
+.import-dropzone:hover,
+.import-dropzone:focus-within,
+.import-dropzone.is-dragover {
+  border-color: var(--liblog-primary);
+  background: var(--liblog-primary-soft);
+}
+.import-dropzone:focus-within {
+  outline: 3px solid var(--liblog-ring);
+  outline-offset: 2px;
+}
+.import-dropzone svg {
+  width: 36px;
+  height: 36px;
+  color: var(--liblog-primary);
+}
+.import-dropzone strong {
+  color: var(--liblog-fg);
+  font-size: 0.95rem;
+}
+.import-dropzone span {
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.import-dropzone > input[type="file"].visually-hidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  min-width: 0;
+  max-width: 1px;
+  height: 1px;
+}
+.admin-main label.admin-checkbox-field.import-overwrite {
+  align-items: flex-start;
+  margin-top: 14px;
+}
+.import-overwrite > span {
+  display: grid;
+  gap: 3px;
+}
+.import-overwrite small {
+  color: var(--liblog-muted);
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.55;
+}
+.import-pending-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  .import-steps {
+    grid-template-columns: 1fr;
+  }
+  .import-field-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .import-page-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .import-page-actions > .btn {
+    width: 100%;
+  }
+  .import-form-card .admin-card-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .import-mode-switch {
+    grid-template-columns: 1fr;
+  }
+  .import-result-counts {
+    grid-template-columns: 1fr;
+  }
+  .import-result-counts > div {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+  }
+  .import-template-actions,
+  .import-template-actions .btn {
+    width: 100%;
+  }
+  .import-dropzone {
+    min-height: 160px;
+  }
+  .import-pending-list .upload-file {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .import-pending-list .upload-file-meta,
+  .import-pending-list .upload-status {
+    grid-column: 1 / -1;
+  }
+}
