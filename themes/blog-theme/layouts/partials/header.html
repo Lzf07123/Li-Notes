@@ -3,7 +3,7 @@
 {{ $current := .RelPermalink }}
 <header class="site-header sticky top-0 z-20 border-b border-border bg-surface/85 backdrop-blur">
   <span class="flow-rule absolute inset-x-0 bottom-0 h-px rounded-none" aria-hidden="true"></span>
-  <div class="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+  <div class="site-header-inner mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
     <a class="site-brand flex shrink-0 items-center gap-2.5 rounded-lg" href="{{ .Site.Home.RelPermalink }}">
       {{ if $brand.logo }}
         {{ $logo_path := "" }}
@@ -21,13 +21,19 @@
     <nav class="site-nav ml-auto flex items-center gap-2" aria-label="主导航">
       <a class="site-nav-link inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" href="{{ .Site.Home.RelPermalink }}" {{ if eq $current .Site.Home.RelPermalink }}aria-current="page"{{ end }}>{{ $nav.home }}</a>
       <a class="site-nav-link inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" href="{{ "posts/" | relURL }}" {{ if hasPrefix $current "/posts/" }}aria-current="page"{{ end }}>{{ $nav.posts }}</a>
-<a class="site-nav-link inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" href="{{ "archive/" | relURL }}" {{ if hasPrefix $current "/archive/" }}aria-current="page"{{ end }}>{{ $nav.archive }}</a>
+      <a class="site-nav-link inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" href="{{ "archive/" | relURL }}" {{ if hasPrefix $current "/archive/" }}aria-current="page"{{ end }}>{{ $nav.archive }}</a>
       <a class="site-nav-link inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" href="{{ "index/" | relURL }}" {{ if hasPrefix $current "/index/" }}aria-current="page"{{ end }}>{{ $nav.index }}</a>
-      <button type="button" class="nav-search-btn inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" data-open-search aria-controls="search-modal" aria-expanded="false" aria-keyshortcuts="Control+K">{{ $nav.search }}</button>
+      <button type="button" class="nav-search-btn inline-flex items-center justify-center min-h-10 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-foreground" data-open-search aria-controls="search-modal" aria-expanded="false" aria-keyshortcuts="Control+K Meta+K">
+        <svg class="nav-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span>{{ $nav.search }}</span>
+      </button>
     </nav>
     <nav class="mobile-nav-primary" aria-label="主导航">
       <a class="mobile-nav-link" href="{{ .Site.Home.RelPermalink }}" {{ if eq $current .Site.Home.RelPermalink }}aria-current="page"{{ end }}>{{ $nav.home }}</a>
-      <button type="button" class="mobile-nav-link mobile-nav-search" data-open-search aria-controls="search-modal" aria-expanded="false">{{ $nav.search }}</button>
+      <button type="button" class="mobile-nav-link mobile-nav-search" data-open-search aria-controls="search-modal" aria-expanded="false" aria-keyshortcuts="Control+K Meta+K">
+        <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span>{{ $nav.search }}</span>
+      </button>
     </nav>
     <div class="mobile-menu" data-mobile-menu>
       <details class="site-menu">
