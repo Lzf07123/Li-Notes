@@ -2001,7 +2001,32 @@ def section_slug_check(request: Request, section: str, slug: str = ""):
 @app.get(ap("/posts/import"), response_class=HTMLResponse)
 def posts_import_page(request: Request):
     require_login(request)
-    return render(request, "import_posts.html", {"label": "批量导入文章"})
+    return render(
+        request,
+        "import_posts.html",
+        {
+            "label": "批量导入笔记",
+            "import_max_files": settings.import_max_files,
+            "import_max_file_mb": round(settings.import_max_file_bytes / 1024 / 1024, 1),
+            "import_max_zip_mb": round(settings.import_max_zip_bytes / 1024 / 1024, 1),
+        },
+    )
+
+
+@app.get(ap("/posts/import/template/{kind}"))
+def posts_import_template(request: Request, kind: str):
+    require_login(request)
+    filename = importer.TEMPLATE_KINDS.get(kind)
+    if not filename:
+        raise HTTPException(status_code=404)
+    return Response(
+        importer.template_markdown(kind),
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.post(ap("/posts/import"))
@@ -2071,13 +2096,30 @@ async def posts_import_submit(
         return render(
             request,
             "import_posts.html",
-            {"label": "批量导入文章", "result": import_result},
+            {
+                "label": "批量导入笔记",
+                "result": import_result,
+                "import_max_files": settings.import_max_files,
+                "import_max_file_mb": round(
+                    settings.import_max_file_bytes / 1024 / 1024, 1
+                ),
+                "import_max_zip_mb": round(
+                    settings.import_max_zip_bytes / 1024 / 1024, 1
+                ),
+            },
         )
     build_state.trigger_build("posts_import")
     return render(
         request,
         "import_posts.html",
-        {"label": "批量导入文章", "result": import_result, "build_pending": True},
+        {
+            "label": "批量导入笔记",
+            "result": import_result,
+            "build_pending": True,
+            "import_max_files": settings.import_max_files,
+            "import_max_file_mb": round(settings.import_max_file_bytes / 1024 / 1024, 1),
+            "import_max_zip_mb": round(settings.import_max_zip_bytes / 1024 / 1024, 1),
+        },
     )
 
 

@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 
 os.environ.setdefault("LIBLOG_BOOTSTRAP_BUILD", "0")
 
-from admin import content as store, knowledge, media, security
+from admin import content as store, importer, knowledge, media, security
 from admin.config import settings
 from admin.db import connect, create_admin, init_db
 from admin.main import app, build, rewrite_preview_html, safe_stats_href
@@ -221,6 +221,38 @@ class AdminRoutesTest(unittest.TestCase):
             self.assertIn('id="import-pending"', r.text)
             self.assertIn('id="import-pending-list"', r.text)
             self.assertIn('addEventListener("change"', r.text)
+            self.assertIn("下载笔记模板", r.text)
+            self.assertIn("下载小程序同步模板", r.text)
+            self.assertIn("三步完成导入", r.text)
+            self.assertIn('id="import-form"', r.text)
+
+    def test_import_templates_require_login_and_download(self):
+        with TestClient(app) as client:
+            anonymous = client.get(
+                "/admin/posts/import/template/note",
+                follow_redirects=False,
+            )
+            self.assertEqual(anonymous.status_code, 302)
+            self._login(client)
+            note = client.get("/admin/posts/import/template/note")
+            mini = client.get("/admin/posts/import/template/mini")
+            unknown = client.get(
+                "/admin/posts/import/template/unknown",
+                follow_redirects=False,
+            )
+        self.assertEqual(note.status_code, 200)
+        self.assertIn("attachment; filename=", note.headers["content-disposition"])
+        self.assertIn("linotes-note-template.md", note.headers["content-disposition"])
+        self.assertEqual(note.headers["cache-control"], "no-store")
+        slug, fm, _ = importer.parse_document("note-template.md", note.text)
+        self.assertEqual(slug, "imported-note-example")
+        self.assertEqual(fm["status"], "draft")
+        self.assertEqual(mini.status_code, 200)
+        self.assertIn("linotes-mini-sync-template.md", mini.headers["content-disposition"])
+        mini_slug, mini_fm, _ = importer.parse_document("mini-template.md", mini.text)
+        self.assertEqual(mini_slug, "mini-sync-example")
+        self.assertTrue(json.loads(mini_fm["mini_json"])["enabled"])
+        self.assertEqual(unknown.status_code, 404)
 
     def test_custom_dropdown_referenced_on_list_and_base(self):
         with TestClient(app) as client:
