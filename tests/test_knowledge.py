@@ -149,6 +149,26 @@ class KnowledgeExportTest(unittest.TestCase):
         payload = json.loads(data_path.read_text(encoding="utf-8"))
         self.assertEqual(knowledge.payload_digest(payload), manifest["sha256"])
 
+    def test_export_bundle_keeps_previous_version_during_rollout(self):
+        out = self.root / "output"
+        paths = []
+        for index, tag in enumerate(("v1", "v2", "v3"), start=1):
+            mini = self._mini()
+            mini["items"][0]["tags"] = [tag]
+            self._write_post("apt", mini)
+            result = knowledge.export_bundle(
+                self.root,
+                out,
+                now=datetime(2026, 10, 23, 12, index, 0),
+            )
+            paths.append(out / result["dataUrl"].lstrip("/"))
+
+        self.assertFalse(paths[0].exists(), "只应清理两代以前的版本文件")
+        self.assertTrue(paths[1].exists(), "上一版本必须保留给发布期间的在途请求")
+        self.assertTrue(paths[2].exists(), "当前版本必须存在")
+        manifest = json.loads((out / "knowledge" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["dataUrl"], f"/knowledge/{paths[2].name}")
+
     def test_duplicate_id_is_rejected(self):
         self._write_post("apt", self._mini())
         self._write_post("apt2", self._mini())
