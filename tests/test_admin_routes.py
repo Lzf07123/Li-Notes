@@ -281,8 +281,14 @@ class AdminRoutesTest(unittest.TestCase):
         self.assertIn('class="row-actions-more" data-action-menu', r.text)
         self.assertIn('aria-label="更多操作" aria-expanded="false"', r.text)
         self.assertIn('class="row-actions-menu" data-row-actions-menu', r.text)
+        self.assertIn('class="row-actions-chevron"', r.text)
+        self.assertIn('class="row-menu-action row-menu-action--danger"', r.text)
+        self.assertIn('href="#row-action-copy"', r.text)
         self.assertRegex(css.text, r"\.row-actions-menu\s*\{[^}]*position:\s*fixed;")
+        self.assertIn("@keyframes row-action-menu-in", css.text)
+        self.assertIn("prefers-reduced-motion: reduce", css.text)
         self.assertIn("positionRowActionsMenu", js.text)
+        self.assertIn('classList.toggle("is-drop-up"', js.text)
 
     def test_bulk_checkboxes_attached_to_bulk_form(self):
         store.write_markdown(

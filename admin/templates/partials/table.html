@@ -1,14 +1,24 @@
 {% macro render_action(act) %}
+  {% set row_item_class = 'row-menu-action' + (' row-menu-action--danger' if act.danger else '') %}
   {% if act.method %}
-  <form method="post" action="{{ act.href }}"{% if act.confirm %} data-confirm="{{ act.confirm }}"{% endif %}>
+  <form class="{{ row_item_class }}" method="post" action="{{ act.href }}"{% if act.confirm %} data-confirm="{{ act.confirm }}"{% endif %}>
     <input type="hidden" name="_csrf" value="{{ csrf }}">
     {% if act.name %}<input type="hidden" name="{{ act.name }}" value="{{ act.value }}">{% endif %}
-    <button type="submit" class="btn-link{{ ' danger' if act.danger else '' }}">{{ act.label }}</button>
+    <button type="submit" class="btn-link{{ ' danger' if act.danger else '' }}">
+      {% if act.icon %}<svg class="row-menu-action-icon" aria-hidden="true"><use href="#row-action-{{ act.icon }}"></use></svg>{% endif %}
+      <span class="row-menu-action-label">{{ act.label }}</span>
+    </button>
   </form>
   {% elif act.button %}
-  <button type="button" class="btn-link{{ ' ' + act.class if act.class else '' }}"{% if act.data_url %} data-url="{{ act.data_url }}"{% endif %} title="{{ act.label }}">{{ act.label }}</button>
+  <button type="button" class="btn-link {{ row_item_class }}{{ ' ' + act.class if act.class else '' }}"{% if act.data_url %} data-url="{{ act.data_url }}"{% endif %} title="{{ act.label }}">
+    {% if act.icon %}<svg class="row-menu-action-icon" aria-hidden="true"><use href="#row-action-{{ act.icon }}"></use></svg>{% endif %}
+    <span class="row-menu-action-label">{{ act.label }}</span>
+  </button>
   {% else %}
-  <a class="btn-link{{ ' danger' if act.danger else '' }}" href="{{ act.href }}"{% if act.external %} target="_blank" rel="noopener"{% endif %} title="{{ act.label }}">{{ act.label }}</a>
+  <a class="btn-link {{ row_item_class }}{{ ' danger' if act.danger else '' }}" href="{{ act.href }}"{% if act.external %} target="_blank" rel="noopener"{% endif %} title="{{ act.label }}">
+    {% if act.icon %}<svg class="row-menu-action-icon" aria-hidden="true"><use href="#row-action-{{ act.icon }}"></use></svg>{% endif %}
+    <span class="row-menu-action-label">{{ act.label }}</span>
+  </a>
   {% endif %}
 {% endmacro %}
 {% if table %}
@@ -71,10 +81,20 @@
           {{ render_action(act) }}
           {% endfor %}
           {% if secondary_actions %}
+          {% set normal_secondary = secondary_actions|rejectattr("danger")|list %}
+          {% set danger_secondary = secondary_actions|selectattr("danger")|list %}
           <details class="row-actions-more" data-action-menu>
-            <summary aria-label="更多操作" aria-expanded="false">更多</summary>
+            <summary aria-label="更多操作" aria-expanded="false">
+              <span>更多</span>
+              <svg class="row-actions-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 9 6 6 6-6"></path>
+              </svg>
+            </summary>
             <div class="row-actions-menu" data-row-actions-menu>
-              {% for act in secondary_actions %}
+              {% for act in normal_secondary %}
+              {{ render_action(act) }}
+              {% endfor %}
+              {% for act in danger_secondary %}
               {{ render_action(act) }}
               {% endfor %}
             </div>

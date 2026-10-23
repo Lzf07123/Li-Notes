@@ -2442,52 +2442,179 @@ input[type="file"]::file-selector-button:hover {
 }
 .row-actions-more {
   display: inline-block;
-  margin-left: 12px;
+  margin-left: 8px;
   vertical-align: middle;
 }
 .row-actions-more > summary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   min-height: 44px;
-  padding: 0 6px;
-  color: var(--liblog-primary);
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--liblog-muted);
   font-weight: 500;
+  line-height: 1;
   cursor: pointer;
   list-style: none;
+  touch-action: manipulation;
+  transition:
+    color var(--liblog-motion-fast) var(--liblog-ease-out),
+    background-color var(--liblog-motion-fast) var(--liblog-ease-out),
+    border-color var(--liblog-motion-fast) var(--liblog-ease-out);
+}
+.row-actions-more > summary:hover,
+.row-actions-more > summary:focus-visible {
+  border-color: var(--liblog-border);
+  background: var(--liblog-surface-2);
+  color: var(--liblog-fg);
+}
+.row-actions-more[open] > summary {
+  border-color: color-mix(in srgb, var(--liblog-primary) 32%, var(--liblog-border));
+  background: var(--liblog-primary-soft);
+  color: var(--liblog-primary);
 }
 .row-actions-more > summary::-webkit-details-marker {
   display: none;
 }
+.row-actions-chevron {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.72;
+  transition: transform var(--liblog-motion-fast) var(--liblog-ease-out);
+}
+.row-actions-more[open] .row-actions-chevron {
+  transform: rotate(180deg);
+}
 .row-actions-menu {
+  --row-menu-enter-y: 4px;
   position: fixed;
   z-index: 80;
   display: grid;
   gap: 2px;
-  width: max-content;
-  min-width: 190px;
+  width: min(216px, calc(100vw - 24px));
   max-width: calc(100vw - 24px);
   max-height: calc(100svh - 24px);
   margin: 0;
-  padding: 6px;
+  padding: 8px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border: 1px solid var(--liblog-border);
-  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--liblog-primary) 18%, var(--liblog-border));
+  border-radius: 14px;
   background: var(--liblog-surface);
-  box-shadow: var(--liblog-shadow-md);
+  box-shadow: var(--liblog-shadow-lg);
+  transform-origin: top right;
+  animation: row-action-menu-in var(--liblog-motion-fast) var(--liblog-ease-out) both;
 }
-.row-actions-menu .btn-link,
-.row-actions-menu form {
+.row-actions-more.is-drop-up .row-actions-menu {
+  --row-menu-enter-y: -4px;
+  transform-origin: bottom right;
+}
+@keyframes row-action-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--row-menu-enter-y)) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.row-actions-menu .row-menu-action {
   display: flex;
   align-items: center;
+  gap: 10px;
+  width: 100%;
   min-height: 44px;
   margin: 0;
-  padding: 0 8px;
+  padding: 0 10px;
+  border-radius: 9px;
+  color: var(--liblog-fg);
+  font-size: 0.875rem;
+  font-weight: 500;
   text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    color var(--liblog-motion-fast) var(--liblog-ease-out),
+    background-color var(--liblog-motion-fast) var(--liblog-ease-out);
+}
+.row-actions-menu form.row-menu-action > .btn-link {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.row-actions-menu .row-menu-action:hover,
+.row-actions-menu .row-menu-action:active,
+.row-actions-menu .row-menu-action:focus-within {
+  background: var(--liblog-primary-soft);
+  color: var(--liblog-primary);
+}
+.row-actions-menu .row-menu-action:active {
+  background: color-mix(in srgb, var(--liblog-primary-soft) 76%, var(--liblog-surface-2));
+}
+.row-menu-action-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--liblog-muted);
+  transition: color var(--liblog-motion-fast) var(--liblog-ease-out);
+}
+.row-menu-action:hover .row-menu-action-icon,
+.row-menu-action:active .row-menu-action-icon,
+.row-menu-action:focus-within .row-menu-action-icon {
+  color: currentColor;
+}
+.row-menu-action-label {
+  min-width: 0;
+}
+.row-menu-action--danger {
+  position: relative;
+  margin-top: 6px;
+  color: var(--liblog-destructive);
+}
+.row-menu-action--danger::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  right: 4px;
+  left: 4px;
+  border-top: 1px solid var(--liblog-border);
+}
+.row-menu-action--danger .row-menu-action-icon {
+  color: var(--liblog-destructive);
+}
+.row-actions-menu .row-menu-action--danger:hover,
+.row-actions-menu .row-menu-action--danger:active,
+.row-actions-menu .row-menu-action--danger:focus-within {
+  background: var(--liblog-destructive-soft);
+  color: var(--liblog-destructive);
 }
 .row-actions-menu .btn-link:hover {
   text-decoration: none;
+}
+.row-actions-menu .row-menu-action:focus-visible,
+.row-actions-menu .row-menu-action > .btn-link:focus-visible {
+  outline-offset: -2px;
 }
 .row-actions-more:not([open]) .row-actions-menu {
   display: none;
@@ -2923,8 +3050,13 @@ input[type="file"]::file-selector-button:hover {
 
 @media (prefers-reduced-motion: reduce) {
   .admin-nav-group-chevron,
+  .row-actions-chevron,
+  .row-menu-action,
+  .row-menu-action-icon,
+  .row-actions-menu,
   .to-top {
     transition: none;
+    animation: none;
   }
 }
 

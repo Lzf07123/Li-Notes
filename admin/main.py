@@ -2313,7 +2313,12 @@ def section_list(
                 "external": True,
                 "primary": True,
             },
-            {"label": "复制", "href": ap(f"/{section}/{item['slug']}/duplicate"), "method": "post"},
+            {
+                "label": "复制",
+                "href": ap(f"/{section}/{item['slug']}/duplicate"),
+                "method": "post",
+                "icon": "copy",
+            },
         ]
         if section == "posts":
             actions.append(
@@ -2323,6 +2328,7 @@ def section_list(
                     "method": "post",
                     "name": "status",
                     "value": "draft" if item["status"] == "published" else "published",
+                    "icon": "file" if item["status"] == "published" else "publish",
                 }
             )
             actions.append(
@@ -2330,6 +2336,7 @@ def section_list(
                     "label": "取消置顶" if item.get("pinned") else "置顶",
                     "href": ap(f"/posts/{item['slug']}/pin"),
                     "method": "post",
+                    "icon": "pin-off" if item.get("pinned") else "pin",
                 }
             )
         actions.append(
@@ -2339,6 +2346,7 @@ def section_list(
                 "method": "post",
                 "danger": True,
                 "confirm": "确定移入回收站？删除后会立即重建公开站。",
+                "icon": "trash",
             }
         )
         is_scheduled = section == "posts" and item.get("status") != "draft" and _is_future(str(item.get("date") or ""))
@@ -2352,6 +2360,7 @@ def section_list(
                     "label": "立即发布",
                     "href": ap(f"/posts/{item['slug']}/publish-now"),
                     "method": "post",
+                    "icon": "publish",
                 }
             )
         rows.append(
