@@ -1,6 +1,7 @@
 /**
  * 代码块一键复制（2026-08-22）
- * 为 .article-body 内每个 <pre> 注入右上角复制按钮；点击复制代码文本
+ * 为 .article-body 内每个 <pre> 创建独立外壳并注入固定复制按钮；
+ * 滚动发生在代码面内部，按钮不随横向滚动位移。点击复制代码文本
  * （自动剔除 Chroma 行号 .ln），成功后按钮短暂显示「已复制」。
  * 文案由模板通过 data-* 注入（config/strings.yaml），JS 不硬编码可见文案。
  */
@@ -53,12 +54,21 @@
   }
 
   Array.prototype.forEach.call(pres, function (pre) {
+    var highlight = pre.parentElement;
+    var surface = highlight && highlight.classList.contains("highlight") ? highlight : pre;
+    if (surface.parentElement && surface.parentElement.classList.contains("code-shell")) return;
+
+    var shell = document.createElement("div");
+    shell.className = "code-shell";
+    surface.parentNode.insertBefore(shell, surface);
+    shell.appendChild(surface);
+
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "code-copy";
     btn.textContent = copyText;
     btn.setAttribute("aria-label", copyText);
-    pre.appendChild(btn);
+    shell.appendChild(btn);
 
     btn.addEventListener("click", function () {
       var text = codeText(pre);

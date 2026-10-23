@@ -55,7 +55,7 @@
         (function () {
           var toc = document.querySelector(".article-toc");
           if (!toc) return;
-          var mobile = window.matchMedia("(max-width: 1120px)");
+          var mobile = window.matchMedia("(max-width: 1200px)");
           function syncToc() {
             if (mobile.matches) toc.removeAttribute("open");
             else toc.setAttribute("open", "");
