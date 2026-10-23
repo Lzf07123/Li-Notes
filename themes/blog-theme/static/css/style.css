@@ -1482,7 +1482,7 @@ body.search-modal-open { overflow: hidden; }
 .back-top { margin-top: 32px; text-align: center; }
 .back-to-top {
   position: fixed;
-  right: 20px;
+  right: max(20px, calc((100vw - 1180px) / 2 + 20px));
   bottom: var(--back-top-bottom, 24px);
   z-index: 55;
   display: grid;
@@ -2356,7 +2356,10 @@ mark {
   .post-nav { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-  .back-to-top { right: 14px; --back-top-bottom: 16px; }
+  .back-to-top {
+    right: max(20px, calc(env(safe-area-inset-right, 0px) + 12px));
+    --back-top-bottom: 20px;
+  }
   .meta-sep { display: none; }
   .masonry { column-count: 1; column-gap: 0; }
   .article-body { font-size: 1rem; }

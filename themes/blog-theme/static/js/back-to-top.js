@@ -14,7 +14,7 @@
 
   function updateVisibility() {
     var visible = window.scrollY > threshold;
-    var baseBottom = window.innerWidth <= 640 ? 16 : 24;
+    var baseBottom = window.innerWidth <= 640 ? 20 : 24;
     var footerClearance = footer
       ? Math.max(baseBottom, Math.round(window.innerHeight - footer.getBoundingClientRect().top + 12))
       : baseBottom;
