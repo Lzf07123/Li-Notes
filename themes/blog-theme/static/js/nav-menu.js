@@ -1,6 +1,28 @@
 (function () {
   "use strict";
 
+  var header = document.querySelector(".site-header");
+  var scrollQueued = false;
+
+  function syncHeaderState() {
+    scrollQueued = false;
+    if (!header) return;
+    var top = window.scrollY || document.documentElement.scrollTop || 0;
+    header.classList.toggle("is-scrolled", top > 8);
+  }
+
+  function queueHeaderState() {
+    if (!header || scrollQueued) return;
+    scrollQueued = true;
+    if (window.requestAnimationFrame) window.requestAnimationFrame(syncHeaderState);
+    else syncHeaderState();
+  }
+
+  if (header) {
+    syncHeaderState();
+    window.addEventListener("scroll", queueHeaderState, { passive: true });
+  }
+
   var menus = Array.prototype.slice.call(document.querySelectorAll("[data-mobile-menu]"));
   if (!menus.length) return;
 
