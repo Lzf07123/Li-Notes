@@ -186,6 +186,7 @@ class TestBuild(unittest.TestCase):
             text = target.read_text(encoding="utf-8")
             self.assertIn("tokens:", text)
             self.assertIn("built_at:", text)
+            self.assertIn("copy_code:", text)
 
     def test_clear_tree_tolerates_mountpoint(self):
         with tempfile.TemporaryDirectory() as d:
