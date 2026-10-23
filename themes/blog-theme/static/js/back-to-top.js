@@ -4,6 +4,7 @@
   var button = document.querySelector(".back-to-top");
   if (!button) return;
 
+  var footer = document.querySelector(".site-footer");
   var threshold = 0;
   var ticking = false;
 
@@ -13,9 +14,14 @@
 
   function updateVisibility() {
     var visible = window.scrollY > threshold;
+    var baseBottom = window.innerWidth <= 640 ? 16 : 24;
+    var footerClearance = footer
+      ? Math.max(baseBottom, Math.round(window.innerHeight - footer.getBoundingClientRect().top + 12))
+      : baseBottom;
     button.classList.toggle("is-visible", visible);
     button.tabIndex = visible ? 0 : -1;
     button.setAttribute("aria-hidden", visible ? "false" : "true");
+    button.style.setProperty("--back-top-bottom", footerClearance + "px");
     ticking = false;
   }
 
