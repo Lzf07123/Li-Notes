@@ -166,6 +166,12 @@ output/
 
 内容不变时，`contentVersion` 和 `sha256` 保持不变；`generatedAt` 不参与业务内容签名。
 
+发布策略：
+
+- `manifest.json` 使用 `Cache-Control: no-store`，确保客户端能及时看到新版本指针。
+- 版本 JSON 以内容 Hash 命名，使用长期 `immutable` 缓存。
+- 每次构建保留当前与上一版本 JSON；只清理两代以前的文件，避免发布期间的在途请求 404。
+
 ## 6. 更新小程序内置基线
 
 远程热更新使用已发布的 `output/knowledge/`。发布小程序新版本时，如需更新随包基线：
@@ -205,7 +211,7 @@ knowledgeManifestPath: '/knowledge/manifest.json'
 2. 确认 HTTPS 证书有效。
 3. 确认 `/knowledge/manifest.json` 和版本 JSON 可公开读取。
 
-未配置域名时，小程序继续使用内置基线和本地缓存，不会报功能不可用。
+未配置域名时，小程序继续使用内置基线和本地缓存，不会报功能不可用。只写主机名时客户端会自动补全 `https://`；公网 HTTP 会被拒绝，仅 `localhost`、`127.0.0.1` 与 `::1` 允许用于本地联调。`manifest.dataUrl` 必须与更新域名同源。
 
 ## 8. 备案信息配置
 
@@ -294,7 +300,38 @@ docker compose --profile admin run --rm admin python scripts/build.py --full
 | 小程序显示“未配置更新地址” | `knowledgeBaseUrl` 为空 | 填写 HTTPS 域名 |
 | 小程序请求失败 | 域名不在合法域名列表或证书异常 | 检查公众平台与 HTTPS |
 | Hash 不匹配 | 发布数据被截断或手动修改 | 重新执行全量构建并发布 |
-| 更新失败但仍能查询 | 回退机制生效 | 保留旧缓存，排查 manifest/data |
+| `manifest.dataUrl` 被拒绝 | 数据地址与更新域名不同源或使用 HTTP | 改回同源相对路径 |
+| 更新失败但仍能查询 | 回退机制生效 | 查看关于页错误详情，排查 manifest/data |
+
+### 安全验证
+
+容器内回归与审计：
+
+```bash
+docker compose --profile admin run --rm -e LIBLOG_BOOTSTRAP_BUILD=0 \
+  -v "$PWD/tests:/app/tests:ro" admin sh -c \
+  'unset BUILD_TMP_ROOT PREVIEW_ROOT; \
+   python -m unittest discover -s tests -q && \
+   python scripts/check_hardcoded.py && \
+   python scripts/check_contrast.py'
+```
+
+依赖与静态扫描：
+
+```bash
+docker run --rm -v "$PWD/requirements.lock:/tmp/requirements.lock:ro" \
+  python:3.12-slim sh -c 'pip install --quiet pip-audit && pip-audit -r /tmp/requirements.lock'
+
+docker run --rm -v "$PWD:/app:ro" python:3.12-slim sh -c \
+  'pip install --quiet bandit && bandit -q -r /app/admin /app/scripts -x /app/tests'
+```
+
+正文安全边界：
+
+- 禁止原始 `<script>`、`iframe`、`object`、`embed`、`form`、`svg`、`style` 等高风险标签。
+- 禁止内联事件属性、inline `style`、`srcdoc` 与 `javascript:` / `vbscript:` / `data:` URL。
+- 上述规则在后台保存、批量导入和全量构建前执行；Markdown 代码围栏与行内代码中的展示文本不会误报。
+- `COOKIE_SECURE=1` 且尚未创建管理员时，必须设置 `SETUP_TOKEN`，否则应用拒绝启动，避免公开实例被抢先接管。
 
 ### 发布前检查
 
@@ -302,4 +339,5 @@ docker compose --profile admin run --rm admin python scripts/build.py --full
 - 版本 JSON 存在且无 404
 - `count` 与预期速查数量一致
 - 小程序关于页显示正确版本和备案信息
-- 断网、弱网和坏包时仍可查询
+- 响应头符合 `manifest: no-store`、版本 JSON: `immutable`
+- 断网、弱网、坏包、旧 manifest 与错误缓存时仍可查询

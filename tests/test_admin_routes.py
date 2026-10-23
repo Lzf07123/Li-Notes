@@ -61,6 +61,19 @@ class AdminRoutesTest(unittest.TestCase):
         r = client.get("/admin/")
         return re.search(r'name="_csrf" value="([^"]+)"', r.text).group(1)
 
+    def test_admin_login_security_headers_and_cookie(self):
+        with TestClient(app) as client:
+            r = client.get("/admin/login")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.headers["cache-control"], "no-store")
+        self.assertEqual(r.headers["x-robots-tag"], "noindex")
+        self.assertEqual(r.headers["x-frame-options"], "SAMEORIGIN")
+        self.assertIn("form-action 'self'", r.headers["content-security-policy"])
+        cookie = r.headers.get("set-cookie", "").lower()
+        self.assertIn("httponly", cookie)
+        self.assertIn("samesite=lax", cookie)
+        self.assertIn("path=/admin", cookie)
+
     def test_preview_out_requires_login(self):
         target = settings.preview_root / "posts" / "draft" / "index.html"
         target.parent.mkdir(parents=True)
@@ -458,6 +471,30 @@ class AdminRoutesTest(unittest.TestCase):
             self.assertEqual(r.status_code, 303)
         fm, _ = store.read_markdown("posts", "synced-note")
         self.assertEqual(json.loads(fm["mini_json"])["items"][0]["id"], "sync-test")
+
+    def test_post_save_rejects_unsafe_raw_html(self):
+        original = build.run_full
+        build.run_full = lambda: (types.SimpleNamespace(returncode=0, stderr=""), 0.01)
+        self.addCleanup(setattr, build, "run_full", original)
+        with TestClient(app) as client:
+            csrf = self._login(client)
+            r = client.post(
+                "/admin/posts/save",
+                data={
+                    "_csrf": csrf,
+                    "slug": "",
+                    "new_slug": "xss-note",
+                    "action": "save_stay",
+                    "title": "XSS",
+                    "date": "2026-10-23",
+                    "status": "published",
+                    "body": '<img src="x" onerror="alert(1)">',
+                },
+                follow_redirects=False,
+            )
+            self.assertEqual(r.status_code, 303)
+            self.assertIn("error=", r.headers.get("location", ""))
+        self.assertFalse((settings.content_root / "posts" / "xss-note.md").exists())
 
     def test_trash_restore_cycle(self):
         store.write_markdown(
@@ -1003,6 +1040,40 @@ class AdminRoutesTest(unittest.TestCase):
         self.assertIn("校验通过", r.text)
         self.assertIn("搜索记录", r.text)
         self.assertIn("内容索引", r.text)
+
+    def test_content_index_page_rejects_knowledge_count_mismatch(self):
+        (settings.output_root / "knowledge").mkdir(parents=True)
+        payload = {
+            "schemaVersion": 1,
+            "contentVersion": "v1",
+            "categories": [],
+            "items": [],
+            "generatedAt": "2026-10-23T12:00:00+08:00",
+        }
+        digest = knowledge.payload_digest(payload)
+        (settings.output_root / "knowledge" / "v1.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+        (settings.output_root / "knowledge" / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "contentVersion": "v1",
+                    "minAppVersion": "0.2.0",
+                    "generatedAt": payload["generatedAt"],
+                    "count": 3,
+                    "sha256": digest,
+                    "dataUrl": "/knowledge/v1.json",
+                }
+            ),
+            encoding="utf-8",
+        )
+        with TestClient(app) as client:
+            self._login(client)
+            r = client.get("/admin/content-index")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("校验失败", r.text)
+        self.assertIn("长度不一致", r.text)
 
     def test_rewrite_preview_html_rewrites_assets(self):
         html = (

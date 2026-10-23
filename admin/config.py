@@ -37,6 +37,10 @@ class Settings:
         # 首次建站保护令牌：设置后 setup 路由必须提供（建议部署时生成随机串）
         self.setup_token = os.getenv("SETUP_TOKEN", "").strip()
 
+    @property
+    def admin_cookie_path(self) -> str:
+        return f"/{self.admin_path}" if self.admin_path else "/"
+
     @staticmethod
     def _resolve_session_secret() -> str:
         """会话密钥优先读环境变量；缺失时使用 DB 同目录 secret 文件持久化。

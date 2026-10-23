@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from admin import knowledge
-from admin.content import split_frontmatter
+from admin.content import scan_markdown_security, split_frontmatter
 
 FINGERPRINT_FILES = {
     "css.tokens": "themes/blog-theme/static/css/tokens.css",
@@ -79,12 +79,14 @@ def validate_content(root):
     errors = []
     for p in sorted((root / "content").rglob("*.md")):
         text = p.read_text(encoding="utf-8")
-        fm_text, _ = split_frontmatter(text)
+        fm_text, body = split_frontmatter(text)
         if fm_text:
             try:
                 yaml.safe_load(fm_text)
             except Exception as exc:  # noqa: BLE001 - 统一收集为可读错误
                 errors.append(f"{p.relative_to(root)}: frontmatter 解析失败: {exc}")
+        for issue in scan_markdown_security(body):
+            errors.append(f"{p.relative_to(root)}: {issue}")
     return errors
 
 
