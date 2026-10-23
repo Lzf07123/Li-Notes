@@ -106,14 +106,19 @@
     var above = triggerRect.top - panelRect.height - gap;
     var top = below;
 
+    var dropUp = false;
     if (below + panelRect.height > viewportHeight - margin) {
-      top = above >= margin
-        ? above
-        : Math.max(margin, viewportHeight - margin - panelRect.height);
+      if (above >= margin) {
+        top = above;
+        dropUp = true;
+      } else {
+        top = Math.max(margin, viewportHeight - margin - panelRect.height);
+      }
     }
 
     panel.style.left = Math.round(left) + "px";
     panel.style.top = Math.round(top) + "px";
+    menu.classList.toggle("is-drop-up", dropUp);
   }
 
   var rowMenuFrame = 0;
@@ -132,12 +137,17 @@
       if (trigger) {
         trigger.setAttribute("aria-expanded", menu.open ? "true" : "false");
       }
-      if (menu.open) scheduleRowMenuPosition();
+      if (menu.open) {
+        positionRowActionsMenu(menu);
+        scheduleRowMenuPosition();
+      } else {
+        menu.classList.remove("is-drop-up");
+      }
     });
   });
 
   window.addEventListener("resize", scheduleRowMenuPosition, { passive: true });
-  window.addEventListener("scroll", scheduleRowMenuPosition, true);
+  window.addEventListener("scroll", scheduleRowMenuPosition, { capture: true, passive: true });
 
   document.querySelectorAll("details[data-action-menu]").forEach(function (menu) {
     menu.addEventListener("toggle", function () {
