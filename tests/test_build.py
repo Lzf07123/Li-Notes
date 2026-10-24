@@ -1,14 +1,19 @@
+import datetime
 import os
 import pathlib
 import tempfile
 import types
 import unittest
 from unittest import mock
+from zoneinfo import ZoneInfo
+
+import yaml
 
 from scripts.build import (
     build,
     build_tmp_root,
     clear_tree,
+    latest_post_mtime,
     preview_output_root,
     publish,
     validate_content,
@@ -16,6 +21,8 @@ from scripts.build import (
     verify_output,
     write_fingerprint,
 )
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
 class TestBuild(unittest.TestCase):
@@ -181,12 +188,52 @@ class TestBuild(unittest.TestCase):
             css.mkdir(parents=True)
             (css / "tokens.css").write_text(":root{}", encoding="utf-8")
             (css / "style.css").write_text("body{}", encoding="utf-8")
+            posts = root / "content" / "posts"
+            posts.mkdir(parents=True)
+            post = posts / "latest.md"
+            post.write_text("---\ndate: 2000-01-01\n---\n正文\n", encoding="utf-8")
+            mtime = 1_700_000_000
+            os.utime(post, (mtime, mtime))
             target = write_fingerprint(root)
             self.assertTrue(target.exists())
             text = target.read_text(encoding="utf-8")
             self.assertIn("tokens:", text)
+            expected = datetime.datetime.fromtimestamp(
+                mtime, ZoneInfo("Asia/Shanghai")
+            )
+            data = yaml.safe_load(text)
+            self.assertEqual(data["content_updated_at"], expected.isoformat())
+            self.assertEqual(
+                data["content_updated_date"], expected.strftime("%Y-%m-%d")
+            )
             self.assertIn("built_at:", text)
             self.assertIn("copy_code:", text)
+
+    def test_latest_post_mtime_uses_filesystem_not_frontmatter(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            posts = root / "content" / "posts"
+            nested = posts / "series"
+            nested.mkdir(parents=True)
+            older = posts / "older.md"
+            newer = nested / "newer.md"
+            index = posts / "_index.md"
+            older.write_text("---\ndate: 2099-01-01\n---\n旧文\n", encoding="utf-8")
+            newer.write_text("---\ndate: 2000-01-01\n---\n新文\n", encoding="utf-8")
+            index.write_text("---\ntitle: 文章\n---\n目录\n", encoding="utf-8")
+            os.utime(older, (1_600_000_000, 1_600_000_000))
+            os.utime(newer, (1_700_000_000, 1_700_000_000))
+            os.utime(index, (1_800_000_000, 1_800_000_000))
+            self.assertEqual(latest_post_mtime(root), 1_700_000_000)
+
+    def test_home_latest_update_uses_build_mtime_snapshot(self):
+        template = (
+            REPO_ROOT / "themes" / "blog-theme" / "layouts" / "index.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn("$build.content_updated_date", template)
+        self.assertIn("$build.content_updated_at", template)
+        self.assertNotIn("$latest", template)
+        self.assertNotIn(".Date.Format", template)
 
     def test_clear_tree_tolerates_mountpoint(self):
         with tempfile.TemporaryDirectory() as d:

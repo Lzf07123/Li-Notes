@@ -6,6 +6,7 @@
 """
 
 import argparse
+import datetime
 import fcntl
 import hashlib
 import json
@@ -16,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import time
+from zoneinfo import ZoneInfo
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
@@ -37,6 +39,7 @@ FINGERPRINT_FILES = {
     "js.back_to_top": "themes/blog-theme/static/js/back-to-top.js",
     "js.responsive_tables": "themes/blog-theme/static/js/responsive-tables.js",
 }
+SITE_TIME_ZONE = ZoneInfo("Asia/Shanghai")
 
 
 def build_tmp_root(root):
@@ -280,7 +283,7 @@ def verify_output(dst, expect_absolute_urls=False, content_root=None):
 
 
 def write_fingerprint(root):
-    """构建前把关键静态资源哈希写入 config/build.yaml（自动缓存指纹）。
+    """构建前写入静态资源指纹与文章文件变动时间。
 
     Hugo dataDir 指向 config/，模板可通过 hugo.Data.build 读取；
     后台由 render() 读取同一文件生成资源版本号。文件为构建期生成物，
@@ -288,7 +291,13 @@ def write_fingerprint(root):
     """
     config_dir = root / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
-    data = {"css": {}, "js": {}, "built_at": ""}
+    data = {
+        "css": {},
+        "js": {},
+        "content_updated_at": "",
+        "content_updated_date": "",
+        "built_at": "",
+    }
     for key, rel in FINGERPRINT_FILES.items():
         section, name = key.split(".", 1)
         path = root / rel
@@ -297,9 +306,14 @@ def write_fingerprint(root):
         else:
             digest = "missing"
         data[section][name] = digest
-    import datetime
-
-    data["built_at"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+    latest_mtime = latest_post_mtime(root)
+    if latest_mtime is not None:
+        updated_at = datetime.datetime.fromtimestamp(latest_mtime, SITE_TIME_ZONE)
+        data["content_updated_at"] = updated_at.isoformat(timespec="seconds")
+        data["content_updated_date"] = updated_at.strftime("%Y-%m-%d")
+    data["built_at"] = datetime.datetime.now().astimezone().isoformat(
+        timespec="seconds"
+    )
     import yaml
 
     text = yaml.safe_dump(
@@ -310,6 +324,24 @@ def write_fingerprint(root):
     tmp.write_text(f"# build.yaml（构建期自动生成，勿手改）\n{text}\n", encoding="utf-8")
     os.replace(tmp, target)
     return target
+
+
+def latest_post_mtime(root):
+    """返回 content/posts 下最后一篇文章的文件 mtime，不读取 frontmatter。"""
+    posts_dir = pathlib.Path(root) / "content" / "posts"
+    if not posts_dir.exists():
+        return None
+    latest = None
+    for path in posts_dir.rglob("*.md"):
+        if path.name == "_index.md" or not path.is_file():
+            continue
+        try:
+            modified = path.stat().st_mtime
+        except OSError:
+            continue
+        if latest is None or modified > latest:
+            latest = modified
+    return latest
 
 
 def build(args):
