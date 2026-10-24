@@ -1,6 +1,6 @@
 # Li&Notes 实现速览
 
-> 版本：v2.9 ｜ 日期：2026-10-23 ｜ 技术栈：Hugo + FastAPI + SQLite + Nginx
+> 版本：v3.0 ｜ 日期：2026-10-24 ｜ 技术栈：Hugo + FastAPI + SQLite + Nginx
 
 ## 1. 结构
 
@@ -105,6 +105,7 @@ HUGO_BIN=/path/to/hugo-0.165.0 python scripts/build.py --full
 ## 8. 公开站阅读体验
 
 - 首页先展示紧凑的学习档案摘要（笔记数、主题数、最近更新），再直接进入笔记流，不扩展为个人主页 Hero。
+- 首页“最近更新”只使用 `content/posts/` 下非栏目文章文件的最大 mtime，由构建脚本写入 `config/build.yaml` 并供 Hugo 读取；禁止使用文章 `date`、`updated`、`lastmod` 或其他 frontmatter 元数据代替。
 - 笔记、标签与归档页共用页面标题层级：来源眉题、唯一 H1、简述与统计；归档与标签按内容关系组织，不做装饰性时间线。
 - 文章页只保留模板生成的唯一 H1；桌面端目录固定在正文右侧，视口 ≤1200px 时折叠为原生可键盘操作的 `details`；正文列始终在视口中心。
 - 移动端主导航固定保留首页与搜索，“更多”菜单提供笔记、归档和内容索引入口。

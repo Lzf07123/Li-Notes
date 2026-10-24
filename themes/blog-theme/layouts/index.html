@@ -4,7 +4,7 @@
 {{ $posts := where .Site.RegularPages "Section" "posts" }}
 {{ $pinned := where $posts "Params.pinned" true }}
 {{ $normal := where $posts "Params.pinned" "ne" true }}
-{{ $latest := $posts.ByDate.Reverse | first 1 }}
+{{ $build := hugo.Data.build | default dict }}
 <section class="home-intro" aria-labelledby="home-heading">
   <p class="page-eyebrow">{{ $strings.home.eyebrow }}</p>
   <h1 id="home-heading" class="home-title">{{ $brand.tagline }}</h1>
@@ -12,8 +12,8 @@
   <div class="home-facts">
     <span class="home-fact"><strong>{{ len $posts }}</strong>{{ $strings.home.note_count }}</span>
     <span class="home-fact"><strong>{{ len .Site.Taxonomies.tags }}</strong>{{ $strings.home.topic_count }}</span>
-    {{ with $latest }}
-    <span class="home-fact home-fact-date"><span>{{ $strings.home.latest_update }}</span><time datetime="{{ (index . 0).Date.Format "2006-01-02" }}">{{ (index . 0).Date.Format "2006-01-02" }}</time></span>
+    {{ with $build.content_updated_date }}
+    <span class="home-fact home-fact-date"><span>{{ $strings.home.latest_update }}</span><time datetime="{{ $build.content_updated_at }}">{{ . }}</time></span>
     {{ end }}
   </div>
 </section>
